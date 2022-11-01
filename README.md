@@ -8,3 +8,4 @@ On this repository, I will share my docker composes. Feel free to use, edit, and
 - [ArangoDB](arangodb/) ([website](https://www.arangodb.com/))
 - [PostgreSQL](postgresql/) ([website](https://www.postgresql.org/))
 - [Redis](redis/) ([website](https://redis.io/))
+- [Kafka](kafka/) ([website](https://kafka.apache.org/))
