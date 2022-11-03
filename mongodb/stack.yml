@@ -4,7 +4,7 @@ version: '3.1'
 services:
 
   mongo:
-    image: mongo:4.4.14
+    image: mongo:4.4.17
     ports:
       - 27017:27017
     environment:
