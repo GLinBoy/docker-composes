@@ -2,7 +2,7 @@ version: '3.8'
 services:
   arangodb_db_container:
     container_name: ArangoDB
-    image: arangodb:3.8.2
+    image: arangodb:3.10.0
     environment:
       ARANGO_ROOT_PASSWORD: 1
     ports:
