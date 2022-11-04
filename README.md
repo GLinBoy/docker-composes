@@ -15,3 +15,4 @@ On this repository, I will share my docker composes. Feel free to use, edit, and
 - [RabbitMQ](rabbitmq/) ([website](https://www.rabbitmq.com/))
 - [MinIO](minio/) ([website](https://min.io/))
 - [Nginx](nginx/) ([website](https://nginx.org/))
+- [Vault](vault/) ([website](https://www.vaultproject.io/))
