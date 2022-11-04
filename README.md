@@ -14,3 +14,4 @@ On this repository, I will share my docker composes. Feel free to use, edit, and
 - [Keycloak](keycloak/) ([website](https://www.keycloak.org/))
 - [RabbitMQ](rabbitmq/) ([website](https://www.rabbitmq.com/))
 - [MinIO](minio/) ([website](https://min.io/))
+- [Nginx](nginx/) ([website](https://nginx.org/))
