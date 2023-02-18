@@ -25,7 +25,7 @@ services:
       - drupal-data:/var/www/html
   
   webserver:
-    image: nginx:1.17.4-alpine
+    image: nginx:1.23.3-alpine-slim
     container_name: webserver
     depends_on:
       - drupal
