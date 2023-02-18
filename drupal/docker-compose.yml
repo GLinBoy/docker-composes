@@ -42,7 +42,7 @@ services:
   certbot:
     depends_on:
       - webserver
-    image: certbot/certbot
+    image: certbot/certbot:v2.3.0
     container_name: certbot
     volumes:
       - certbot-etc:/etc/letsencrypt
