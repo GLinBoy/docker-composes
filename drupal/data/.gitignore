@@ -1,3 +1,4 @@
 *
 */
 !.gitignore
+!nginx-data/nginx.conf
