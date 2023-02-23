@@ -8,7 +8,7 @@ services:
     restart: unless-stopped
     env_file: .env
     volumes:
-      - db-data:/var/lib/mysql
+      - ./data/mysql-data:/var/lib/mysql
     networks:
       - internal
   
@@ -22,7 +22,7 @@ services:
       - internal
       - external
     volumes:
-      - drupal-data:/var/www/html
+      - ./data/drupal-data:/var/www/html
   
   webserver:
     image: nginx:1.23.3-alpine-slim
@@ -33,9 +33,9 @@ services:
     ports:
       - 80:80
     volumes:
-      - drupal-data:/var/www/html
-      - ./nginx-conf:/etc/nginx/conf.d
-      - certbot-etc:/etc/letsencrypt
+      - ./data/drupal-data:/var/www/html
+      - ./data/nginx-data:/etc/nginx/conf.d
+      - ./certbot-data:/etc/letsencrypt
     networks:
       - external
   
@@ -45,17 +45,12 @@ services:
     image: certbot/certbot:v2.3.0
     container_name: certbot
     volumes:
-      - certbot-etc:/etc/letsencrypt
-      - drupal-data:/var/www/html
-    command: certonly --webroot --webroot-path=/var/www/html --email sammy@your_domain --agree-tos --no-eff-email --staging -d your_domain -d www.your_domain
+      - ./certbot-data:/etc/letsencrypt
+      - ./data/drupal-data:/var/www/html
+    command: certonly --webroot --webroot-path=/var/www/html --email sammy@your_domain --agree-tos --no-eff-email --staging -d localhost
 
 networks:
   external:
     driver: bridge
   internal:
     driver: bridge
-
-volumes:
-  drupal-data:
-  db-data:
-  certbot-etc:
