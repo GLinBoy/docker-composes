@@ -1,4 +1,5 @@
 version: '3.8'
+name: arangodb
 services:
   arangodb_db_container:
     container_name: ArangoDB
