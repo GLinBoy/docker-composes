@@ -1,8 +1,8 @@
-version: "3"
+version: '3'
 
 services:
   mysql:
-    image: mysql:8.0.33
+    image: mysql:8.0.34
     container_name: mysql
     command: --default-authentication-plugin=mysql_native_password
     restart: unless-stopped
@@ -11,7 +11,7 @@ services:
       - ./data/mysql-data:/var/lib/mysql
     networks:
       - internal
-  
+
   drupal:
     image: drupal:10.0.9-fpm-alpine3.18
     container_name: drupal
@@ -23,7 +23,7 @@ services:
       - external
     volumes:
       - ./data/drupal-data:/var/www/html
-  
+
   webserver:
     image: nginx:1.25.1-alpine-slim
     container_name: webserver
@@ -38,7 +38,7 @@ services:
       - ./certbot-data:/etc/letsencrypt
     networks:
       - external
-  
+
   certbot:
     depends_on:
       - webserver
