@@ -2,11 +2,10 @@ version: '3'
 services:
   PostgreSQL14:
     container_name: PostgreSQL
-    image: postgres:15.3-alpine3.18 # use latest official postgres version
+    image: postgres:15.4-alpine3.18 # use latest official postgres version
     env_file:
       - database.env # configure postgres
     volumes:
       - ./data:/var/lib/postgresql/data/ # persist data even if container shuts downvolumes:
     ports:
       - 5432:5432
-
