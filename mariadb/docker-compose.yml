@@ -2,7 +2,7 @@ version: '3.9'
 
 services:
   mariadb:
-    image: mariadb:11.0.3
+    image: mariadb:11.1.2
     ports:
       - 3306:3306
     volumes:
