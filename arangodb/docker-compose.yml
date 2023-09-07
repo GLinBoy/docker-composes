@@ -3,7 +3,7 @@ name: arangodb
 services:
   arangodb_db_container:
     container_name: ArangoDB
-    image: arangodb:3.11.2
+    image: arangodb:3.11.3
     environment:
       ARANGO_ROOT_PASSWORD: 1
     ports:
