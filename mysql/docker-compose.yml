@@ -1,4 +1,4 @@
-version: '3'
+version: "3.8"
 
 services:
   # MySQL
@@ -11,10 +11,10 @@ services:
       MYSQL_DATABASE: sandbox
       #      MYSQL_USER: sandbox_user
       #      MYSQL_PASSWORD: passpass
-      MYSQL_ALLOW_EMPTY_PASSWORD: 'yes'
+      MYSQL_ALLOW_EMPTY_PASSWORD: "yes"
     ports:
-      - '3306:3306'
+      - "3306:3306"
     volumes:
-      - './docker/db/data:/var/lib/mysql'
-      - './docker/db/my.cnf:/etc/mysql/conf.d/my.cnf'
-      - './docker/db/sql:/docker-entrypoint-initdb.d'
+      - "./docker/db/data:/var/lib/mysql"
+      - "./docker/db/my.cnf:/etc/mysql/conf.d/my.cnf"
+      - "./docker/db/sql:/docker-entrypoint-initdb.d"
