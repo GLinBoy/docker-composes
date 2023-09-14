@@ -1,0 +1,10 @@
+version: "3.8"
+services:
+  httpd:
+    image: httpd:latest
+    container_name: apache
+    ports:
+      - "80:80"
+    volumes:
+      - "/apache:/usr/local/apache2/htdocs/"
+    restart: always
