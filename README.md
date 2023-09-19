@@ -4,6 +4,7 @@ On this repository, I will share my docker composes. Feel free to use, edit, and
 
 ---
 
+- [Apache](apache/) ([website](https://httpd.apache.org/))
 - [ArangoDB](arangodb/) ([website](https://www.arangodb.com/))
 - [Drupal](drupal/) ([website](https://www.drupal.org/))
 - [ELK](elk/) ([website](https://www.elastic.co/what-is/elk-stack))
