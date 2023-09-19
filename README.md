@@ -19,6 +19,7 @@ On this repository, I will share my docker composes. Feel free to use, edit, and
 - [Portainer](portainer/) ([website](https://www.portainer.io/))
 - [PostgreSQL](postgresql/) ([website](https://www.postgresql.org/))
 - [RabbitMQ](rabbitmq/) ([website](https://www.rabbitmq.com/))
+- [Traefik](traefik/) ([website](https://traefik.io/traefik/))
 - [Redis](redis/) ([website](https://redis.io/))
 - [Vault](vault/) ([website](https://www.vaultproject.io/))
 - [Wireguard](wireguard/) ([website](https://www.wireguard.com/))
