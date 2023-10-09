@@ -1,8 +1,8 @@
-version: '3'
+version: "3"
 
 services:
   portainer:
-    image: portainer/portainer-ce:2.19.0-alpine
+    image: portainer/portainer-ce:2.19.1-alpine
     container_name: portainer
     command: -H unix:///var/run/docker.sock
     restart: always
