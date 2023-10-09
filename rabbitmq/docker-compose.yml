@@ -1,8 +1,8 @@
-version: '3'
+version: "3"
 
 services:
   rabbitmq:
-    image: rabbitmq:3.12.4-management-alpine
+    image: rabbitmq:3.12.6-management-alpine
     container_name: rabbitmq_management
 
     ports:
