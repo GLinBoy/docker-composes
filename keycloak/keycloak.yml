@@ -5,7 +5,7 @@ services:
     image: quay.io/keycloak/keycloak:23.0.1
     command:
       [
-        'start-dev --import-realm'
+        'start-dev', '--import-realm'
       ]
     volumes:
       - ./realm-config:/opt/keycloak/data/import
