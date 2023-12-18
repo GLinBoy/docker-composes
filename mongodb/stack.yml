@@ -16,7 +16,7 @@ services:
 
   mongo-express:
     container_name: mongo-express
-    image: mongo-express:1.0.0-alpha.4
+    image: mongo-express:1.0.0-18-alpine3.18
     depends_on:
       - mongo
     ports:
