@@ -2,7 +2,7 @@ version: "3.8"
 
 # Settings and configurations that are common for all containers
 x-minio-common: &minio-common
-  image: minio/minio:RELEASE.2024-01-31T20-20-33Z
+  image: minio/minio:RELEASE.2024-02-06T21-36-22Z
   command: server --console-address ":9001" http://minio{1...4}/data{1...2}
   expose:
     - "9000"
