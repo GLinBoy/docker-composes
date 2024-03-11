@@ -27,3 +27,4 @@ On this repository, I will share my docker composes. Feel free to use, edit, and
 - [Apache Web Server](apache/) ([website](https://httpd.apache.org/))
 - [Traefik](traefik/) ([website](https://traefik.io/traefik/))
 - [Tor Proxy](tor/proxy/) ([website](https://www.torproject.org/))
+- [Cassandra](cassandra/) ([website](https://cassandra.apache.org))
