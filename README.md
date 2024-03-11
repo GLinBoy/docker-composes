@@ -28,3 +28,4 @@ On this repository, I will share my docker composes. Feel free to use, edit, and
 - [Traefik](traefik/) ([website](https://traefik.io/traefik/))
 - [Tor Proxy](tor/proxy/) ([website](https://www.torproject.org/))
 - [Cassandra](cassandra/) ([website](https://cassandra.apache.org))
+- [ScyllaDB](scylladb/) ([website](https://www.scylladb.com/))
