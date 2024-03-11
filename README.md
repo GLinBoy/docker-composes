@@ -24,3 +24,4 @@ On this repository, I will share my docker composes. Feel free to use, edit, and
 - [Vault](vault/) ([website](https://www.vaultproject.io/))
 - [Wireguard](wireguard/) ([website](https://www.wireguard.com/))
 - [Wordpress](wordpress/) ([website](https://wordpress.org/))
+- [Apache Web Server](apache/) ([website](https://httpd.apache.org/))
