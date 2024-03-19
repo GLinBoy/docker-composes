@@ -1,0 +1,24 @@
+version: "3.8"
+services:
+  postgresql:
+    image: postgres:16.2-alpine3.19
+    container_name: "gogs-postgresql"
+    volumes:
+      - "./gogs-data/postgresql:/var/lib/postgresql:Z"
+    environment:
+      - "POSTGRES_USER=gogs"
+      - "POSTGRES_PASSWORD=redhat"
+      - "POSTGRES_DB=gogs"
+    ports:
+      - "5432:5432"
+
+  gogs:
+    image: gogs/gogs:0.13
+    container_name: "gogs"
+    volumes:
+      - "./gogs-data/gogs:/data:Z"
+    ports:
+      - "22:22"
+      - "3000:3000"
+    links:
+      - postgresql
