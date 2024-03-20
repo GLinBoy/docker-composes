@@ -30,3 +30,4 @@ On this repository, I will share my docker composes. Feel free to use, edit, and
 - [Cassandra](cassandra/) ([website](https://cassandra.apache.org))
 - [ScyllaDB](scylladb/) ([website](https://www.scylladb.com/))
 - [Gitea](gitea/) ([website](https://about.gitea.com/))
+- [Gogs](gogs/) ([website](https://gogs.io/))
