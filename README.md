@@ -31,3 +31,4 @@ On this repository, I will share my docker composes. Feel free to use, edit, and
 - [ScyllaDB](scylladb/) ([website](https://www.scylladb.com/))
 - [Gitea](gitea/) ([website](https://about.gitea.com/))
 - [Gogs](gogs/) ([website](https://gogs.io/))
+- [Jenkins](jenkins/) ([website](https://www.jenkins.io/))
