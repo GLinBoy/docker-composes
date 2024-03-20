@@ -32,3 +32,4 @@ On this repository, I will share my docker composes. Feel free to use, edit, and
 - [Gitea](gitea/) ([website](https://about.gitea.com/))
 - [Gogs](gogs/) ([website](https://gogs.io/))
 - [Jenkins](jenkins/) ([website](https://www.jenkins.io/))
+- [Sonatype Nexus](sonatype-nexus/) ([website](https://www.sonatype.com/products/sonatype-nexus-repository))
