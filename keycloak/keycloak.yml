@@ -1,12 +1,9 @@
 # This configuration is intended for development purpose, it's **your** responsibility to harden it for production
-version: '3.8'
+version: "3.8"
 services:
   keycloak:
-    image: quay.io/keycloak/keycloak:24.0.1
-    command:
-      [
-        'start-dev', '--import-realm'
-      ]
+    image: quay.io/keycloak/keycloak:24.0.2
+    command: ["start-dev", "--import-realm"]
     volumes:
       - ./realm-config:/opt/keycloak/data/import
     environment:
