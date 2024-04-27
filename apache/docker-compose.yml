@@ -1,7 +1,7 @@
 version: "3.8"
 services:
   httpd:
-    image: httpd:2.4.58-alpine3.18
+    image: httpd:2.4.59-alpine3.19
     container_name: apache
     ports:
       - "80:80"
