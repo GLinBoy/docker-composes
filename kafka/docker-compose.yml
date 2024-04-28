@@ -27,7 +27,7 @@ services:
 
   KafkaUI:
     container_name: CMT-KafkaUI-Container
-    image: provectuslabs/kafka-ui:v0.7.1
+    image: provectuslabs/kafka-ui:v0.7.2
     ports:
       - 9093:8080
     depends_on:
