@@ -2,7 +2,7 @@ version: "3"
 services:
   #Nginx Service
   webserver:
-    image: nginx:1.25.4-alpine
+    image: nginx:1.25.5-alpine3.19
     container_name: webserver
     restart: unless-stopped
     tty: true
