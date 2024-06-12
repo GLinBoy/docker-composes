@@ -2,7 +2,7 @@ version: "3.8"
 services:
   PostgreSQL14:
     container_name: PostgreSQL
-    image: postgres:16.2-alpine3.19 # use latest official postgres version
+    image: postgres:16.3-alpine3.20 # use latest official postgres version
     env_file:
       - database.env # configure postgres
     volumes:
