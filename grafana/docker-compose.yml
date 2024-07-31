@@ -6,7 +6,7 @@ networks:
 
 services:
   grafana:
-    image: grafana/grafana:11.1.0
+    image: grafana/grafana:11.1.1
     container_name: grafana
     volumes:
       - grafana_data:/var/lib/grafana
