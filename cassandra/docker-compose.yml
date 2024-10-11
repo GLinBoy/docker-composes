@@ -2,7 +2,7 @@ version: "3.8"
 
 services:
   cassandra1:
-    image: cassandra:5.0.0-jammy
+    image: cassandra:5.0.1-jammy
     container_name: cassandra1
     ports:
       - "9042:9042"
@@ -11,14 +11,14 @@ services:
     networks:
       - cassandra-network
   cassandra2:
-    image: cassandra:5.0.0-jammy
+    image: cassandra:5.0.1-jammy
     container_name: cassandra2
     environment:
       - CASSANDRA_SEEDS=cassandra1,cassandra2,cassandra3
     networks:
       - cassandra-network
   cassandra3:
-    image: cassandra:5.0.0-jammy
+    image: cassandra:5.0.1-jammy
     container_name: cassandra3
     environment:
       - CASSANDRA_SEEDS=cassandra1,cassandra2,cassandra3
