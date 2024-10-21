@@ -36,3 +36,4 @@ On this repository, I will share my docker composes. Feel free to use, edit, and
 - [SonarQube](sonarqube/) ([website](https://www.sonarsource.com/products/sonarqube/))
 - [SmokePing](smokeping/) ([website](https://oss.oetiker.ch/smokeping/))
 - [MailHog](mailhog/) ([website](https://mailcatcher.me/))
+- [Ollama](ollama/) ([website](https://ollama.com/))
