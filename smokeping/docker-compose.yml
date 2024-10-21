@@ -1,0 +1,13 @@
+version: "3"
+name: smokeping
+services:
+  smokeping:
+    image: lscr.io/linuxserver/smokeping:latest
+    container_name: smokeping
+    environment:
+      - PUID=1000
+      - PGID=1000
+      - TZ=Etc/UTC
+    ports:
+      - 19090:80
+    restart: unless-stopped
