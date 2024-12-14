@@ -2,7 +2,7 @@ version: "3"
 name: smokeping
 services:
   smokeping:
-    image: lscr.io/linuxserver/smokeping:latest
+    image: lscr.io/linuxserver/smokeping:2.8.2
     container_name: smokeping
     environment:
       - PUID=1000
