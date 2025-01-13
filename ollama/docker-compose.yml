@@ -2,6 +2,6 @@ version: "3"
 name: ollama
 services:
   ollama:
-    image: ollama/ollama:0.5.4
+    image: ollama/ollama:0.5.5
     ports:
       - "11434:11434"
