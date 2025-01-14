@@ -1,0 +1,15 @@
+version: "3.8"
+services:
+  activemq-classic:
+    image: apache/activemq-classic:6.1.4
+    container_name: activemq-classic
+    environment:
+      ACTIVEMQ_ADMIN_LOGIN: admin
+      ACTIVEMQ_ADMIN_PASSWORD: admin
+    ports:
+      - "61616:61616" # OpenWire (TCP)
+      - "61613:61613" # STOMP
+      - "1883:1883" # MQTT
+      - "5672:5672" # AMQP
+      - "8161:8161" # Web Console (HTTP)
+      - "1099:1099" # JMX RMI Registry Port
