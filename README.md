@@ -38,3 +38,4 @@ On this repository, I will share my docker composes. Feel free to use, edit, and
 - [MailHog](mailhog/) ([website](https://mailcatcher.me/))
 - [Ollama](ollama/) ([website](https://ollama.com/))
 - [ActiveMQ Classic](activemq-classic/) ([website](https://activemq.apache.org/components/classic/))
+- [ActiveMQ Artemis](activemq-artemis/) ([website](https://activemq.apache.org/components/artemis/))
