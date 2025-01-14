@@ -37,3 +37,4 @@ On this repository, I will share my docker composes. Feel free to use, edit, and
 - [SmokePing](smokeping/) ([website](https://oss.oetiker.ch/smokeping/))
 - [MailHog](mailhog/) ([website](https://mailcatcher.me/))
 - [Ollama](ollama/) ([website](https://ollama.com/))
+- [ActiveMQ Classic](activemq-classic/) ([website](https://activemq.apache.org/components/classic/))
