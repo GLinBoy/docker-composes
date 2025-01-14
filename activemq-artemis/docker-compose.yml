@@ -1,0 +1,15 @@
+version: "3.8"
+services:
+  activemq-artemis:
+    image: apache/activemq-artemis:2.39.0-alpine
+    container_name: activemq-artemis
+    environment:
+      ARTEMIS_USERNAME: admin
+      ARTEMIS_PASSWORD: admin
+    ports:
+      - "61616:61616" # Core Protocol (TCP)
+      - "61613:61613" # STOMP
+      - "1883:1883" # MQTT
+      - "5672:5672" # AMQP
+      - "8161:8161" # Web Console (HTTP)
+      - "1099:1099" # JMX RMI Registry Port
