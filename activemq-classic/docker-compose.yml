@@ -1,7 +1,7 @@
 version: "3.8"
 services:
   activemq-classic:
-    image: apache/activemq-classic:6.1.4
+    image: apache/activemq-classic:6.1.5
     container_name: activemq-classic
     environment:
       ACTIVEMQ_ADMIN_LOGIN: admin
