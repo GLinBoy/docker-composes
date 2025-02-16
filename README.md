@@ -41,3 +41,4 @@ On this repository, I will share my docker composes. Feel free to use, edit, and
 - [ActiveMQ Artemis](activemq-artemis/) ([website](https://activemq.apache.org/components/artemis/))
 - [Pi-Hole](pi-hole/) ([website](https://pi-hole.net/))
 - [Tomcat](tomcat/) ([website](https://tomcat.apache.org/))
+- [Jetty](jetty/) ([website](https://jetty.org/))
