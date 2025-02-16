@@ -42,3 +42,4 @@ On this repository, I will share my docker composes. Feel free to use, edit, and
 - [Pi-Hole](pi-hole/) ([website](https://pi-hole.net/))
 - [Tomcat](tomcat/) ([website](https://tomcat.apache.org/))
 - [Jetty](jetty/) ([website](https://jetty.org/))
+- [WildFly](wildfly/) ([website](https://www.wildfly.org/))
