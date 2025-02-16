@@ -1,0 +1,18 @@
+version: "3.8"
+name: jetty
+services:
+  jetty:
+    image: jetty:12.0.16-jre21
+    container_name: jetty
+    ports:
+      - "8080:8080"
+    volumes:
+      - ./data/webapps:/var/lib/jetty/webapps
+      - ./data/wars/:/var/lib/jetty/wars/
+      - ./data/etc/:/var/lib/jetty/etc/
+      - ./data/home/jetty/:/home/jetty/
+    environment:
+      - JETTY_HOME=/var/lib/jetty
+      - JETTY_BASE=/var/lib/jetty
+      - JETTY_LOGS=/var/lib/jetty/logs
+      - JETTY_ARGS=jetty.http.host=
