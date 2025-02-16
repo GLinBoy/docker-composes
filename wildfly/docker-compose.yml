@@ -1,0 +1,12 @@
+version: "3.8"
+name: wildfly
+services:
+  wildfly:
+    image: quay.io/wildfly/wildfly:35.0.1.Final-jdk21
+    container_name: wildfly
+    ports:
+      - 8080:8080
+      - 9990:9990
+    environment:
+      - WILDFLY_USER=admin
+      - WILDFLY_PASS=admin
