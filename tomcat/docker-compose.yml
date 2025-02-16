@@ -1,0 +1,11 @@
+version: "3.8"
+name: tomcat
+services:
+  tomcat:
+    image: tomcat:11.0.3-jre21
+    container_name: tomcat
+    ports:
+      - "8080:8080"
+    volumes:
+      - ./data/webapps:/usr/local/tomcat/webapps
+      - ./data/logs:/usr/local/tomcat/logs
