@@ -1,0 +1,14 @@
+version: "3.8"
+name: dokuwiki
+services:
+  dokuwiki:
+    image: dokuwiki/dokuwiki:2024-02-06b # other tags: master, <date> or <codename>
+    user: "1000:1000" # adjust to your required user id
+    ports:
+      - "8080:8080" # internal port is 8080, map to what you need
+    environment:
+      PHP_TIMEZONE: Europe/Berlin
+      #PHP_MEMORYLIMIT: 256M
+      #PHP_UPLOADLIMIT: 128M
+    volumes:
+      - ./storage:/storage
