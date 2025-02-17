@@ -47,3 +47,4 @@ On this repository, I will share my docker composes. Feel free to use, edit, and
 - [CouchDB](couchdb/) ([website](https://couchdb.apache.org/))
 - [DokuWiki](dokuwiki/) ([website](https://www.dokuwiki.org/))
 - [Wiki.js](wikijs/) ([website](https://js.wiki/))
+- [HAProxy](haproxy/) ([website](https://www.haproxy.org/))
