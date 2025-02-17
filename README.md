@@ -48,3 +48,4 @@ On this repository, I will share my docker composes. Feel free to use, edit, and
 - [DokuWiki](dokuwiki/) ([website](https://www.dokuwiki.org/))
 - [Wiki.js](wikijs/) ([website](https://js.wiki/))
 - [HAProxy](haproxy/) ([website](https://www.haproxy.org/))
+- [Spark](spark/) ([website](https://spark.apache.org/))
