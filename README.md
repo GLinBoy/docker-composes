@@ -44,3 +44,4 @@ On this repository, I will share my docker composes. Feel free to use, edit, and
 - [Jetty](jetty/) ([website](https://jetty.org/))
 - [WildFly](wildfly/) ([website](https://www.wildfly.org/))
 - [Rocket Chat](rocket-chat/) ([website](https://www.rocket.chat/))
+- [CouchDB](couchdb/) ([website](https://couchdb.apache.org/))
