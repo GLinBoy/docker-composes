@@ -1,0 +1,29 @@
+version: "3.8"
+name: flink
+services:
+  flink-jobmanager:
+    image: flink:1.20.0
+    container_name: flink-jobmanager
+    ports:
+      - "8081:8081" # Flink UI
+      - "6123:6123" # RPC Port
+    environment:
+      - JOB_MANAGER_RPC_ADDRESS=flink-jobmanager
+    command: jobmanager
+    networks:
+      - eventhub-net
+
+  flink-taskmanager:
+    image: flink:1.20.0
+    container_name: flink-taskmanager
+    depends_on:
+      - flink-jobmanager
+    environment:
+      - JOB_MANAGER_RPC_ADDRESS=flink-jobmanager
+    command: taskmanager
+    networks:
+      - eventhub-net
+
+networks:
+  eventhub-net:
+    driver: bridge
