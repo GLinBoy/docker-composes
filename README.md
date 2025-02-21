@@ -50,3 +50,4 @@ On this repository, I will share my docker composes. Feel free to use, edit, and
 - [HAProxy](haproxy/) ([website](https://www.haproxy.org/))
 - [Spark](spark/) ([website](https://spark.apache.org/))
 - [Flink](flink/) ([website](https://flink.apache.org/))
+- [Mosquitto](mosquitto/) ([website](https://mosquitto.org/))
