@@ -1,8 +1,8 @@
-version: "3.8"
+name: activemq-artemis
 services:
   activemq-artemis:
-    image: apache/activemq-artemis:2.39.0-alpine
     container_name: activemq-artemis
+    image: apache/activemq-artemis:2.39.0-alpine
     environment:
       ARTEMIS_USERNAME: admin
       ARTEMIS_PASSWORD: admin
@@ -13,3 +13,8 @@ services:
       - "5672:5672" # AMQP
       - "8161:8161" # Web Console (HTTP)
       - "1099:1099" # JMX RMI Registry Port
+    healthcheck:
+      test: wget --no-verbose --tries=1 --spider http://localhost:8161 || exit 1
+      interval: 1m
+      timeout: 1s
+      retries: 3
