@@ -1,8 +1,8 @@
-version: "3.8"
+name: activemq-classic
 services:
   activemq-classic:
-    image: apache/activemq-classic:6.1.5
     container_name: activemq-classic
+    image: apache/activemq-classic:6.1.5
     environment:
       ACTIVEMQ_ADMIN_LOGIN: admin
       ACTIVEMQ_ADMIN_PASSWORD: admin
@@ -13,3 +13,8 @@ services:
       - "5672:5672" # AMQP
       - "8161:8161" # Web Console (HTTP)
       - "1099:1099" # JMX RMI Registry Port
+    healthcheck:
+      test: activemq status
+      interval: 1m
+      timeout: 1s
+      retries: 3
