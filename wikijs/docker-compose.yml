@@ -1,3 +1,4 @@
+name: wikijs
 services:
   db:
     image: postgres:15-alpine
@@ -24,7 +25,12 @@ services:
       DB_PASS: wikijsrocks
       DB_NAME: wiki
     ports:
-      - "80:3000"
+      - "3000:3000"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000"]
+      interval: 1m
+      timeout: 1s
+      retries: 3
 
 volumes:
   db-data:
