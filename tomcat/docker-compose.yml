@@ -2,10 +2,16 @@ version: "3.8"
 name: tomcat
 services:
   tomcat:
-    image: tomcat:11.0.4-jre21
     container_name: tomcat
+    image: tomcat:11.0.4-jre21
     ports:
       - "8080:8080"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080"]
+      start_period: 30s
+      interval: 1m
+      timeout: 1s
+      retries: 3
     volumes:
       - ./data/webapps:/usr/local/tomcat/webapps
       - ./data/logs:/usr/local/tomcat/logs
