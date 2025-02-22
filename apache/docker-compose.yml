@@ -1,10 +1,12 @@
-version: "3.8"
+name: httpd
 services:
   httpd:
+    container_name: httpd
     image: httpd:2.4.63-alpine3.21
-    container_name: apache
     ports:
       - "80:80"
-    volumes:
-      - "/apache:/usr/local/apache2/htdocs/"
-    restart: always
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "http://localhost"]
+      interval: 1m
+      timeout: 1s
+      retries: 3
