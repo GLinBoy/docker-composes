@@ -1,7 +1,7 @@
-version: "3.8"
 name: dokuwiki
 services:
   dokuwiki:
+    container_name: dokuwiki
     image: dokuwiki/dokuwiki:2024-02-06b # other tags: master, <date> or <codename>
     user: "1000:1000" # adjust to your required user id
     ports:
@@ -10,5 +10,10 @@ services:
       PHP_TIMEZONE: Europe/Berlin
       #PHP_MEMORYLIMIT: 256M
       #PHP_UPLOADLIMIT: 128M
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080"]
+      interval: 1m
+      timeout: 1s
+      retries: 3
     volumes:
       - ./storage:/storage
