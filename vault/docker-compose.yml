@@ -1,6 +1,7 @@
-version: "3.8"
+name: vault
 services:
   vault-server:
+    container_name: vault
     image: hashicorp/vault:1.18.4
     ports:
       - "8200:8200"
@@ -9,13 +10,8 @@ services:
       VAULT_DEV_ROOT_TOKEN_ID: "vault-plaintext-root-token"
     cap_add:
       - IPC_LOCK
-    networks:
-      vault-network:
-        ipv4_address: 172.21.0.10
-        aliases:
-          - vault-server
-networks:
-  vault-network:
-    ipam:
-      config:
-        - subnet: 172.21.0.0/24
+    healthcheck:
+      test: nc -zv 0.0.0.0 8200
+      interval: 1m
+      timeout: 1s
+      retries: 5
