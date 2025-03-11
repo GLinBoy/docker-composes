@@ -2,7 +2,7 @@ version: "3.8"
 name: flink
 services:
   flink-jobmanager:
-    image: flink:1.20.0
+    image: flink:1.20.1
     container_name: flink-jobmanager
     ports:
       - "8081:8081" # Flink UI
@@ -14,7 +14,7 @@ services:
       - eventhub-net
 
   flink-taskmanager:
-    image: flink:1.20.0
+    image: flink:1.20.1
     container_name: flink-taskmanager
     depends_on:
       - flink-jobmanager
