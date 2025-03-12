@@ -46,7 +46,7 @@ services:
   # Kong: The API Gateway
   #######################################
   kong:
-    image: kong:3.8.0
+    image: kong:3.9.0
     restart: always
     networks:
       - kong-net
