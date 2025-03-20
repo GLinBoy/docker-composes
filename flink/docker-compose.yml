@@ -10,6 +10,11 @@ services:
     environment:
       - JOB_MANAGER_RPC_ADDRESS=flink-jobmanager
     command: jobmanager
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:8081 || exit 1"]
+      interval: 1m
+      timeout: 1s
+      retries: 3
     networks:
       - eventhub-net
 
@@ -21,6 +26,11 @@ services:
     environment:
       - JOB_MANAGER_RPC_ADDRESS=flink-jobmanager
     command: taskmanager
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://flink-jobmanager:8081/taskmanagers"]
+      interval: 1m
+      timeout: 1s
+      retries: 3
     networks:
       - eventhub-net
 
