@@ -8,6 +8,15 @@ services:
       - "11434:11434"
     volumes:
       - ./ollama:/root/.ollama
+    # GPU support (turn off by commenting with # if you don't have an nvidia gpu)
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities:
+                - gpu
 
   open-webui:
     container_name: open-webui
