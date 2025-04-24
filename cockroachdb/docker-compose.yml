@@ -1,0 +1,46 @@
+version: "3"
+name: cockroachdb
+services:
+  roach1:
+    container_name: roach1
+    image: cockroachdb/cockroach:v25.1.4
+    hostname: roach1
+    command: start --insecure --advertise-addr=roach1:26357 --http-addr=roach1:8080 --listen-addr=roach1:26357 --sql-addr=roach1:26257 --join=roach1:26357,roach2:26357
+    volumes:
+      - roach1:/cockroach/cockroach-data
+    ports:
+      - "26257:26257"
+      - "8080:8080"
+    networks:
+      - roachnet
+
+  roach2:
+    container_name: roach2
+    image: cockroachdb/cockroach:v25.1.4
+    hostname: roach2
+    command: start --insecure --advertise-addr=roach2:26357 --http-addr=roach2:8081 --listen-addr=roach2:26357 --sql-addr=roach2:26258 --join=roach1:26357,roach2:26357
+    volumes:
+      - roach2:/cockroach/cockroach-data
+    ports:
+      - "26258:26258"
+      - "8081:8081"
+    networks:
+      - roachnet
+
+  init:
+    image: cockroachdb/cockroach:v25.1.4
+    networks:
+      - roachnet
+    depends_on:
+      - roach1
+      - roach2
+    command: init --insecure --host=roach1:26357
+    restart: on-failure
+
+networks:
+  roachnet:
+    driver: bridge
+
+volumes:
+  roach1:
+  roach2:
