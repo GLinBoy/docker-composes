@@ -1,7 +1,7 @@
 version: "3.8"
 services:
   wordpress:
-    image: wordpress:6.7.2-php8.1-fpm-alpine
+    image: wordpress:6.8.1-php8.1-fpm-alpine
     links:
       - mariadb:mysql
     environment:
