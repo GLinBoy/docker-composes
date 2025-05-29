@@ -3,7 +3,7 @@ name: cockroachdb
 services:
   roach1:
     container_name: roach1
-    image: cockroachdb/cockroach:v25.1.5
+    image: cockroachdb/cockroach:v25.2.0
     hostname: roach1
     command: start --insecure --advertise-addr=roach1:26357 --http-addr=roach1:8080 --listen-addr=roach1:26357 --sql-addr=roach1:26257 --join=roach1:26357,roach2:26357
     volumes:
