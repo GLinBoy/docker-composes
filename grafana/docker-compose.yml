@@ -1,7 +1,7 @@
 services:
   grafana:
     container_name: grafana
-    image: grafana/grafana:12.0.0
+    image: grafana/grafana:12.0.1
     # volumes:
     #   - grafana_data:/var/lib/grafana
     #   - ./grafana/provisioning/dashboards:/etc/grafana/provisioning/dashboards
