@@ -2,7 +2,7 @@ version: "3.8"
 
 services:
   spark-master:
-    image: apache/spark:3.5.6
+    image: apache/spark:4.0.0
     container_name: spark-master
     hostname: spark-master
     ports:
@@ -16,7 +16,7 @@ services:
       - SPARK_SSL_ENABLED=no
 
   spark-worker:
-    image: apache/spark:3.5.6
+    image: apache/spark:4.0.0
     container_name: spark-worker-1
     hostname: spark-worker-1
     depends_on:
@@ -32,7 +32,7 @@ services:
       - SPARK_SSL_ENABLED=no
 
   spark-worker-2:
-    image: apache/spark:3.5.6
+    image: apache/spark:4.0.0
     container_name: spark-worker-2
     hostname: spark-worker-2
     depends_on:
@@ -48,7 +48,7 @@ services:
       - SPARK_SSL_ENABLED=no
 
   spark-submit:
-    image: apache/spark:3.5.6
+    image: apache/spark:4.0.0
     container_name: spark-submit
     hostname: spark-submit
     depends_on:
