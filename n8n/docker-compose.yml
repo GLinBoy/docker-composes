@@ -1,0 +1,16 @@
+name: n8n
+services:
+  n8n:
+    image: docker.n8n.io/n8nio/n8n:1.98.2
+    ports:
+      - "127.0.0.1:5678:5678"
+    environment:
+      - N8N_HOST=localhost
+      - N8N_PORT=5678
+      - N8N_PROTOCOL=http
+      - NODE_ENV=dev
+      - WEBHOOK_URL=http://localhost
+      - GENERIC_TIMEZONE=Etc/UTC
+    volumes:
+      - ./data/n8n_data:/home/node/.n8n
+      - ./data/local-files:/files
