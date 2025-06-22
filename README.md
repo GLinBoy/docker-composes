@@ -10,6 +10,7 @@ On this repository, I will share my docker composes. Feel free to use, edit, and
 - [Apache Web Server](apache/) ([website](https://httpd.apache.org/))
 - [ArangoDB](arangodb/) ([website](https://www.arangodb.com/))
 - [aria2c](aria2c/) ([website](https://aria2.github.io/))
+- [ariang](aria2c/) ([website](https://github.com/mayswind/AriaNg))
 - [Cassandra](cassandra/) ([website](https://cassandra.apache.org))
 - [CockroachDB](CockroachDB/) ([website](https://www.cockroachlabs.com/))
 - [CouchDB](couchdb/) ([website](https://couchdb.apache.org/))
