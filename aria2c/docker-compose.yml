@@ -30,3 +30,18 @@ services:
       - tor-proxy # Ensures tor-proxy starts before aria2-pro
     networks:
       - internal_network # Only connected to the internal network, no direct internet access
+
+  ariang:
+    build:
+      context: ./ariang
+      dockerfile: Dockerfile
+    container_name: ariang
+    restart: unless-stopped
+    logging:
+      options:
+        max-size: "1m" # Corresponds to --log-opt max-size=1m
+    ports:
+      - "8080:80" # Maps host port 6880 to container port 6880
+    networks:
+      - internal_network # Only connected to the internal network, no direct internet access
+      - external # Connects to the host's network for internet access
