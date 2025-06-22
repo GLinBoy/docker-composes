@@ -1,0 +1,32 @@
+name: aria2c
+services:
+  aria2c:
+    container_name: aria2c
+    build:
+      context: ./aria2c
+      dockerfile: Dockerfile
+    ports:
+      - "6800:6800" # For Aria2 RPC (e.g., for AriaNg to connect)
+      - "6888:6888" # For BitTorrent/Metalink TCP
+      - "6888:6888/udp" # For BitTorrent/Metalink UDP
+    environment:
+      - RPC_LISTEN_ALL=true
+      - RPC_ALLOW_ORIGIN_ALL=1
+      - RPC_SECRET=usr@pass
+      - CONTINUE=true
+      - MAX_CONCURRENT=5
+      - MAX_CONNECTION=16
+      - SPLIT=5
+      - MIN_SPLIT_SIZE=1M
+      - SAVE_SESSION_INTERVAL=60
+      - DISABLE_IPV6=true
+    volumes:
+      # IMPORTANT: Ensure these local paths exist and have correct permissions
+      # They will store your Aria2 configuration and downloaded files.
+      # './aria2-config' and './aria2-downloads' are relative to the docker-compose.yml file.
+      - ./data/aria2:/aria2c/conf
+      - ./data/downloads:/aria2c/downloads
+    depends_on:
+      - tor-proxy # Ensures tor-proxy starts before aria2-pro
+    networks:
+      - internal_network # Only connected to the internal network, no direct internet access
