@@ -17,6 +17,7 @@ On this repository, I will share my docker composes. Feel free to use, edit, and
 - [DokuWiki](dokuwiki/) ([website](https://www.dokuwiki.org/))
 - [Drupal](drupal/) ([website](https://www.drupal.org/))
 - [ELK](elk/) ([website](https://www.elastic.co/what-is/elk-stack))
+- [Firefox](firefox/) ([website](https://www.mozilla.org/en-US/firefox/new/))
 - [Flink](flink/) ([website](https://flink.apache.org/))
 - [Gitea](gitea/) ([website](https://about.gitea.com/))
 - [Gogs](gogs/) ([website](https://gogs.io/))
