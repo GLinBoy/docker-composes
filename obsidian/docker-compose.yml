@@ -1,0 +1,20 @@
+name: obsidian
+services:
+  obsidian:
+    container_name: obsidian
+    image: linuxserver/obsidian:1.8.10
+    security_opt:
+      - seccomp:unconfined
+    environment:
+      - PUID=1000
+      - PGID=1000
+      - TZ=Etc/UTC
+      - CUSTOM_USER=usr
+      - PASSWORD=usr@pass
+    volumes:
+      - ./data/config:/config/
+      - ./data/obsidian:/obsidian
+    ports:
+      - 3000:3000
+      - 3001:3001
+    shm_size: "1gb"
