@@ -35,6 +35,7 @@ On this repository, I will share my docker composes. Feel free to use, edit, and
 - [n8n](n8n/) ([website](https://n8n.io/))
 - [NATS](nats/) ([website](https://nats.io/))
 - [Nginx](nginx/) ([website](https://nginx.org/))
+- [Obsidian](obsidian/) ([website](https://obsidian.md/))
 - [Ollama](ollama/) ([website](https://ollama.com/))
 - [Pi-Hole](pi-hole/) ([website](https://pi-hole.net/))
 - [Portainer](portainer/) ([website](https://www.portainer.io/))
