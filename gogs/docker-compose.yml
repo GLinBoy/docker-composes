@@ -13,7 +13,7 @@ services:
       - "5432:5432"
 
   gogs:
-    image: gogs/gogs:0.13.2
+    image: gogs/gogs:0.13.3
     container_name: "gogs"
     volumes:
       - "./gogs-data/gogs:/data:Z"
