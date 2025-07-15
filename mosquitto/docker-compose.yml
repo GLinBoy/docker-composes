@@ -3,7 +3,7 @@ name: mosquitto
 services:
   mosquitto:
     container_name: mosquitto
-    image: eclipse-mosquitto:2.0.21
+    image: eclipse-mosquitto:2.0.22
     ports:
       - "1883:1883"
       - "9001:9001"
