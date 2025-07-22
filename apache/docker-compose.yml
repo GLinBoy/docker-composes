@@ -2,7 +2,7 @@ name: httpd
 services:
   httpd:
     container_name: httpd
-    image: httpd:2.4.63-alpine3.21
+    image: httpd:2.4.64-alpine3.22
     ports:
       - "80:80"
     healthcheck:
