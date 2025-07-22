@@ -2,7 +2,7 @@ name: activemq-artemis
 services:
   activemq-artemis:
     container_name: activemq-artemis
-    image: apache/activemq-artemis:2.41.0-alpine
+    image: apache/activemq-artemis:2.42.0-alpine
     environment:
       ARTEMIS_USERNAME: admin
       ARTEMIS_PASSWORD: admin
