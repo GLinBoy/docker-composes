@@ -2,7 +2,7 @@ name: vault
 services:
   vault-server:
     container_name: vault
-    image: hashicorp/vault:1.20.1
+    image: hashicorp/vault:1.20.2
     ports:
       - "8200:8200"
     environment:
