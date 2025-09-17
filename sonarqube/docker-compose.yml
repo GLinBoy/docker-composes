@@ -2,7 +2,7 @@ version: "3"
 
 services:
   sonarqube:
-    image: sonarqube:25.8.0.112029-community
+    image: sonarqube:25.9.0.112764-community
     depends_on:
       - db
     environment:
