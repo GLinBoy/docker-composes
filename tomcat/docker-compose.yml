@@ -3,7 +3,7 @@ name: tomcat
 services:
   tomcat:
     container_name: tomcat
-    image: tomcat:11.0.11-jre21
+    image: tomcat:11.0.12-jre25
     ports:
       - "8080:8080"
     healthcheck:
