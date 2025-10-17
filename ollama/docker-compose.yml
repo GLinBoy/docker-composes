@@ -3,7 +3,7 @@ name: ollama
 services:
   ollama:
     container_name: ollama
-    image: ollama/ollama:0.12.3
+    image: ollama/ollama:0.12.6
     ports:
       - "11434:11434"
     volumes:
