@@ -2,7 +2,7 @@ version: "3.8"
 
 services:
   redis:
-    image: redis:8.2.2-alpine3.22
+    image: redis:8.2.3-alpine3.22
     ports:
       - 6379:6379
     command: redis-server --loglevel warning
