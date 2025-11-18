@@ -1,4 +1,4 @@
-FROM alpine:3.20.0
+FROM alpine:3.22.2
 
 RUN apk add --update --no-cache tor && rm -rf /var/cache/apk/* &&\
   sed "1s/^/SocksPort 0.0.0.0:9050\n/" /etc/tor/torrc.sample > /etc/tor/torrc
