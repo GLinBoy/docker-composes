@@ -1,0 +1,26 @@
+version: "3.8"
+name: valkey
+services:
+  valkey:
+    hostname: valkey
+    image: docker.io/valkey/valkey:8-alpine
+    command: valkey-server --save 30 1 --loglevel warning
+    restart: unless-stopped
+    healthcheck:
+      test: "[ $$(valkey-cli ping) = 'PONG' ]"
+      start_period: 5s
+      timeout: 3s
+      interval: 1s
+      retries: 5
+    volumes:
+      - valkey-data:/data
+    cap_drop:
+      - ALL
+    cap_add:
+      - SETGID
+      - SETUID
+      - DAC_OVERRIDE
+
+volumes:
+  valkey-data:
+    driver: local
