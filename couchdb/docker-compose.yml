@@ -1,7 +1,7 @@
 name: couchdb
 services:
   couchdb-0:
-    image: couchdb:3.5.0
+    image: couchdb:3.5.1
     container_name: couchdb-0
     ports:
       - "${PORT_BASE}0:5984"
@@ -20,7 +20,7 @@ services:
       - "data-couch-0:/opt/couchdb/data"
       - "cfg-couch-0:/opt/couchdb/etc/local.d"
   couchdb-1:
-    image: couchdb:3.5.0
+    image: couchdb:3.5.1
     container_name: couchdb-1
     ports:
       - "${PORT_BASE}1:5984"
@@ -39,7 +39,7 @@ services:
       - "data-couch-1:/opt/couchdb/data"
       - "cfg-couch-1:/opt/couchdb/etc/local.d"
   couchdb-2:
-    image: couchdb:3.5.0
+    image: couchdb:3.5.1
     container_name: couchdb-2
     ports:
       - "${PORT_BASE}2:5984"
