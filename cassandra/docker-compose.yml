@@ -2,7 +2,7 @@ name: cassandra
 services:
   cassandra-0:
     container_name: cassandra-0
-    image: cassandra:5.0.5-jammy
+    image: cassandra:5.0.6-jammy
     ports:
       - "9042:9042"
     environment:
@@ -17,7 +17,7 @@ services:
       - cassandra-network
   cassandra-1:
     container_name: cassandra-1
-    image: cassandra:5.0.5-jammy
+    image: cassandra:5.0.6-jammy
     environment:
       - CASSANDRA_SEEDS=cassandra-0,cassandra-1
     healthcheck:
