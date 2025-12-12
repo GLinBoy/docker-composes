@@ -15,6 +15,7 @@ On this repository, I will share my docker composes. Feel free to use, edit, and
 - [CockroachDB](CockroachDB/) ([website](https://www.cockroachlabs.com/))
 - [CouchDB](couchdb/) ([website](https://couchdb.apache.org/))
 - [DokuWiki](dokuwiki/) ([website](https://www.dokuwiki.org/))
+- [Dozzle](dozzle/) ([website](https://dozzle.dev))
 - [Drupal](drupal/) ([website](https://www.drupal.org/))
 - [ELK](elk/) ([website](https://www.elastic.co/what-is/elk-stack))
 - [Firefox](firefox/) ([website](https://www.mozilla.org/en-US/firefox/new/))
