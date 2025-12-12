@@ -55,6 +55,7 @@ On this repository, I will share my docker composes. Feel free to use, edit, and
 - [Traefik](traefik/) ([website](https://traefik.io/traefik/))
 - [Valkey](valkey/) ([website](https://valkey.io/))
 - [Vault](vault/) ([website](https://www.vaultproject.io/))
+- [Watchtower](watchtower/) ([website](https://containrrr.dev/watchtower/))
 - [Wiki.js](wikijs/) ([website](https://js.wiki/))
 - [WildFly](wildfly/) ([website](https://www.wildfly.org/))
 - [Wireguard](wireguard/) ([website](https://www.wireguard.com/))
