@@ -25,6 +25,7 @@ On this repository, I will share my docker composes. Feel free to use, edit, and
 - [Gogs](gogs/) ([website](https://gogs.io/))
 - [HAProxy](haproxy/) ([website](https://www.haproxy.org/))
 - [Home Assistant](home-assistant/) ([website](https://www.home-assistant.io/))
+- [Homer](homer/) ([website](https://github.com/bastienwirtz/homer))
 - [Jenkins](jenkins/) ([website](https://www.jenkins.io/))
 - [Jetty](jetty/) ([website](https://jetty.org/))
 - [Kafka](kafka/) ([website](https://kafka.apache.org/))
