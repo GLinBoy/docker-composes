@@ -43,6 +43,7 @@ On this repository, I will share my docker composes. Feel free to use, edit, and
 - [Pi-Hole](pi-hole/) ([website](https://pi-hole.net/))
 - [Portainer](portainer/) ([website](https://www.portainer.io/))
 - [PostgreSQL](postgresql/) ([website](https://www.postgresql.org/))
+- [Pulse](pulse/) ([website](https://github.com/rcourtman/Pulse))
 - [RabbitMQ](rabbitmq/) ([website](https://www.rabbitmq.com/))
 - [Redis](redis/) ([website](https://redis.io/))
 - [Rocket Chat](rocket-chat/) ([website](https://www.rocket.chat/))
