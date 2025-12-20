@@ -1,0 +1,28 @@
+version: "3"
+
+services:
+  vaultwarden:
+    container_name: vaultwarden
+    image: vaultwarden/server:latest
+    restart: unless-stopped
+    volumes:
+      - ./data/:/data/
+    ports:
+      - 8080:80
+    environment:
+      - DOMAIN=https://192.168.1.100:8080
+      - LOGIN_RATELIMIT_MAX_BURST=10
+      - LOGIN_RATELIMIT_SECONDS=60
+      - ADMIN_RATELIMIT_MAX_BURST=10
+      - ADMIN_RATELIMIT_SECONDS=60
+      - ADMIN_TOKEN=YourReallyStrongAdminTokenHere
+      - SENDS_ALLOWED=true
+      - EMERGENCY_ACCESS_ALLOWED=true
+      - WEB_VAULT_ENABLED=true
+      - SIGNUPS_ALLOWED=false
+      - SIGNUPS_VERIFY=false
+      - SMTP_HOST=smtp.youremaildomain.com
+      - SMTP_FROM=[email protected]
+      - SMTP_PORT=587
+      - SMTP_USERNAME=[email protected]
+      - SMTP_PASSWORD=YourStrongPasswordHere
