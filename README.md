@@ -38,6 +38,7 @@ On this repository, I will share my docker composes. Feel free to use, edit, and
 - [MongoDB](mongodb/) ([website](https://www.mongodb.com/))
 - [Mosquitto](mosquitto/) ([website](https://mosquitto.org/))
 - [MySQL](mysql/) ([website](https://www.mysql.com/))
+- [NetBox](netbox-docker/) ([website](https://netbox.readthedocs.io/en/stable/))
 - [n8n](n8n/) ([website](https://n8n.io/))
 - [NATS](nats/) ([website](https://nats.io/))
 - [Nginx](nginx/) ([website](https://nginx.org/))
