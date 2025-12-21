@@ -1,0 +1,21 @@
+version: "3.9"
+
+services:
+  duplicati:
+    image: duplicati/duplicati # LinuxServer.io image[web:3]
+    container_name: duplicati
+    environment:
+      - PUID=1000 # Change to your user id on the host[web:3]
+      - PGID=1000 # Change to your group id on the host[web:3]
+      - TZ=Europe/Berlin # Or your timezone[web:3]
+      # Optional: secure web UI password and encryption
+      # - DUPLICATI__WEBSERVICE_PASSWORD=yourStrongPassword   # Web UI login[web:3][web:7]
+      # - SETTINGS_ENCRYPTION_KEY=yourConfigKey               # Encrypts config database[web:3]
+      # - CLI_ARGS=                                           # Extra Duplicati CLI options[web:3]
+    volumes:
+      - ./config:/config # Duplicati configuration & database[web:3]
+      - ./backups:/backups # Where backups are stored (destination)[web:3]
+      - /data/to/backup:/source # What you want to back up (source)[web:3]
+    ports:
+      - "8200:8200" # Web UI http://localhost:8200[web:3]
+    restart: unless-stopped
