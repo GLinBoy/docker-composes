@@ -1,0 +1,16 @@
+version: "3.8"
+
+services:
+  mailrise:
+    image: yoryan/mailrise
+    container_name: mailrise
+    restart: unless-stopped
+    volumes:
+      - ./mailrise.conf:/etc/mailrise.conf:ro
+    labels:
+      traefik.tcp.routers.mailrise.rule: "HostSNI(`*`)"
+      traefik.tcp.routers.mailrise.tls: "true"
+      traefik.tcp.routers.mailrise.tls.certresolver: "letsencrypt"
+      traefik.tcp.routers.mailrise.tls.domains[0].main: "my.public.mailrise.domain.com"
+      traefik.tcp.routers.mailrise.tls.domains[0].sans: ""
+      traefik.tcp.routers.mailrise.entrypoints: "mailsecure"
