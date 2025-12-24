@@ -3,7 +3,7 @@ name: valkey
 services:
   valkey:
     hostname: valkey
-    image: valkey/valkey:9.0.1-alpine3.22
+    image: valkey/valkey:9.0.1-alpine3.23
     command: valkey-server --save 30 1 --loglevel warning
     restart: unless-stopped
     healthcheck:
