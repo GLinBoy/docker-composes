@@ -2,7 +2,7 @@ version: "3"
 
 services:
   rabbitmq:
-    image: rabbitmq:4.2.1-management-alpine
+    image: rabbitmq:4.2.2-management-alpine
     container_name: rabbitmq_management
 
     ports:
