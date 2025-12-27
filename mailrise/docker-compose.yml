@@ -2,7 +2,7 @@ version: "3.8"
 
 services:
   mailrise:
-    image: yoryan/mailrise
+    image: yoryan/mailrise:1.3.0
     container_name: mailrise
     restart: unless-stopped
     volumes:
