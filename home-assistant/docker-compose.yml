@@ -3,7 +3,7 @@ version: "3.8"
 services:
   homeassistant:
     container_name: homeassistant
-    image: "ghcr.io/home-assistant/home-assistant:stable"
+    image: homeassistant/home-assistant:2025.12.4
     volumes:
       - /PATH_TO_YOUR_CONFIG:/config
       - /etc/localtime:/etc/localtime:ro
