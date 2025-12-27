@@ -2,7 +2,7 @@ version: "3.8"
 
 services:
   homer:
-    image: b4bz/homer
+    image: b4bz/homer:v25.11.1
     container_name: homer
     volumes:
       - /path/to/config/dir:/www/assets # Make sure your local config directory exists
