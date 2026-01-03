@@ -2,7 +2,7 @@ version: "3.8"
 name: jetty
 services:
   jetty:
-    image: jetty:12.1.4-jdk21
+    image: jetty:12.1.5-jdk21
     container_name: jetty
     ports:
       - "8080:8080"
