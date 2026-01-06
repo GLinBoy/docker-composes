@@ -3,7 +3,7 @@ name: cockroachdb
 services:
   roach1:
     container_name: roach1
-    image: cockroachdb/cockroach:v25.4.1
+    image: cockroachdb/cockroach:v25.4.2
     hostname: roach1
     command: start --insecure --advertise-addr=roach1:26357 --http-addr=roach1:8080 --listen-addr=roach1:26357 --sql-addr=roach1:26257 --join=roach1:26357,roach2:26357
     volumes:
@@ -16,7 +16,7 @@ services:
 
   roach2:
     container_name: roach2
-    image: cockroachdb/cockroach:v25.4.01
+    image: cockroachdb/cockroach:v25.4.2
     hostname: roach2
     command: start --insecure --advertise-addr=roach2:26357 --http-addr=roach2:8081 --listen-addr=roach2:26357 --sql-addr=roach2:26258 --join=roach1:26357,roach2:26357
     volumes:
@@ -28,7 +28,7 @@ services:
       - roachnet
 
   init:
-    image: cockroachdb/cockroach:v25.4.1
+    image: cockroachdb/cockroach:v25.4.2
     networks:
       - roachnet
     depends_on:
