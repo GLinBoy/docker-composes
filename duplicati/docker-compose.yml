@@ -2,7 +2,7 @@ version: "3.9"
 
 services:
   duplicati:
-    image: duplicati/duplicati:2.2.0.1 # LinuxServer.io image[web:3]
+    image: duplicati/duplicati:2.2.0.3 # LinuxServer.io image[web:3]
     container_name: duplicati
     environment:
       - PUID=1000 # Change to your user id on the host[web:3]
