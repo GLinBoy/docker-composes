@@ -3,7 +3,7 @@ version: "3.8"
 # Run with docker stack deploy -c dozzle-stack.yml <name>
 services:
   dozzle:
-    image: amir20/dozzle:v9.0.1
+    image: amir20/dozzle:v9.0.2
     environment:
       - DOZZLE_MODE=swarm
     volumes:
