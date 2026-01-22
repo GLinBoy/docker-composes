@@ -1,0 +1,27 @@
+services:
+  stirling-pdf:
+    image: stirlingtools/stirling-pdf:2.3.0
+    container_name: stirling-pdf
+    ports:
+      - "8080:8080"
+    volumes:
+      - ./stirling-data/tessdata:/usr/share/tessdata
+      - ./stirling-data/configs:/configs
+      - ./stirling-data/logs:/logs
+      - ./stirling-data/customFiles:/customFiles:rw
+      - ./stirling-data/pipeline:/pipeline
+    environment:
+      - SECURITY_ENABLELOGIN=true
+      - LANGS=en_GB
+      - SYSTEM_DEFAULTLOCALE=en-GB
+      - SYSTEM_GOOGLEVISIBILITY=false
+      - SYSTEM_MAXFILESIZE=2000
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          memory: 4G
+          cpus: "2.0"
+        reservations:
+          memory: 2G
+          cpus: "1.0"
