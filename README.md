@@ -60,6 +60,7 @@ On this repository, I will share my docker composes. Feel free to use, edit, and
 - [SonarQube](sonarqube/) ([website](https://www.sonarsource.com/products/sonarqube/))
 - [Sonatype Nexus](sonatype-nexus/) ([website](https://www.sonatype.com/products/sonatype-nexus-repository))
 - [Spark](spark/) ([website](https://spark.apache.org/))
+- [Stirling PDF](stirling-pdf/) ([website](https://www.stirling.com/))
 - [Tomcat](tomcat/) ([website](https://tomcat.apache.org/))
 - [Tor Proxy](tor/proxy/) ([website](https://www.torproject.org/))
 - [Traefik](traefik/) ([website](https://traefik.io/traefik/))
