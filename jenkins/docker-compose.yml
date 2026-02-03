@@ -2,7 +2,7 @@ version: "3.8"
 
 services:
   jenkins:
-    image: jenkins/jenkins:2.547-jdk25
+    image: jenkins/jenkins:2.549-jdk25
     container_name: "jenkins"
     privileged: true
     restart: always
