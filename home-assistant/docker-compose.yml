@@ -3,7 +3,7 @@ version: "3.8"
 services:
   homeassistant:
     container_name: homeassistant
-    image: homeassistant/home-assistant:2026.1.3
+    image: homeassistant/home-assistant:2026.2.1
     volumes:
       - /PATH_TO_YOUR_CONFIG:/config
       - /etc/localtime:/etc/localtime:ro
