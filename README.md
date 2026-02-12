@@ -30,6 +30,7 @@ On this repository, I will share my docker composes. Feel free to use, edit, and
 - [Home Assistant](home-assistant/) ([website](https://www.home-assistant.io/))
 - [Homer](homer/) ([website](https://github.com/bastienwirtz/homer))
 - [Jenkins](jenkins/) ([website](https://www.jenkins.io/))
+- [Jellyfin](jellyfin/) ([website](https://jellyfin.org/))
 - [Jetty](jetty/) ([website](https://jetty.org/))
 - [Kafka](kafka/) ([website](https://kafka.apache.org/))
 - [Keycloak](keycloak/) ([website](https://www.keycloak.org/))
