@@ -1,0 +1,13 @@
+services:
+  paperless-gpt:
+    image: icereed/paperless-gpt:v0.24.0
+    container_name: paperless-gpt
+    environment:
+      - PAPERLESS_BASE_URL=http://paperless:8000
+      - PAPERLESS_API_TOKEN=your_paperless_api_token_here
+      - LLM_PROVIDER=openai
+      - LLM_MODEL=gpt-4o
+      - OPENAI_API_KEY=your_openai_api_key_here
+    ports:
+      - 8080:8080
+    restart: unless-stopped
