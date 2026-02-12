@@ -75,3 +75,4 @@ On this repository, I will share my docker composes. Feel free to use, edit, and
 - [WildFly](wildfly/) ([website](https://www.wildfly.org/))
 - [Wireguard](wireguard/) ([website](https://www.wireguard.com/))
 - [Wordpress](wordpress/) ([website](https://wordpress.org/))
+- [WUD](wud/) ([website](https://getwud.github.io/wud/))
