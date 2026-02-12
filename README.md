@@ -26,6 +26,7 @@ On this repository, I will share my docker composes. Feel free to use, edit, and
 - [Gogs](gogs/) ([website](https://gogs.io/))
 - [Grafana](grafana/) ([website](https://grafana.com/))
 - [HAProxy](haproxy/) ([website](https://www.haproxy.org/))
+- [Heimdall](heimdall/) ([website](https://heimdall.site/))
 - [Home Assistant](home-assistant/) ([website](https://www.home-assistant.io/))
 - [Homer](homer/) ([website](https://github.com/bastienwirtz/homer))
 - [Jenkins](jenkins/) ([website](https://www.jenkins.io/))
