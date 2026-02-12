@@ -52,6 +52,7 @@ On this repository, I will share my docker composes. Feel free to use, edit, and
 - [Nginx Proxy Manager](nginx-proxy-manager/) ([website](https://nginxproxymanager.com/))
 - [Obsidian](obsidian/) ([website](https://obsidian.md/))
 - [Ollama](ollama/) ([website](https://ollama.com/))
+- [Paperless-AI](paperless-ai/) ([website](https://clusterzx.github.io/paperless-ai/))
 - [Paperless-GPT](paperless-gpt/) ([website](https://github.com/icereed/paperless-gpt))
 - [Pi-Hole](pi-hole/) ([website](https://pi-hole.net/))
 - [Portainer](portainer/) ([website](https://www.portainer.io/))
