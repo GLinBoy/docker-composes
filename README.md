@@ -12,6 +12,7 @@ On this repository, I will share my docker composes. Feel free to use, edit, and
 - [ariang](aria2c/) ([website](https://github.com/mayswind/AriaNg))
 - [Beszel](beszel/) ([website](https://beszel.dev/))
 - [Bitwarden (Vaultwarden)](bitwarden/) ([website](https://bitwarden.com/), [Vaultwarden](https://github.com/dani-garcia/vaultwarden))
+- [BookStack](bookstack/) ([website](https://www.bookstackapp.com/))
 - [Cassandra](cassandra/) ([website](https://cassandra.apache.org))
 - [CockroachDB](CockroachDB/) ([website](https://www.cockroachlabs.com/))
 - [CouchDB](couchdb/) ([website](https://couchdb.apache.org/))
