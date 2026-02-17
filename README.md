@@ -73,6 +73,7 @@ On this repository, I will share my docker composes. Feel free to use, edit, and
 - [Tomcat](tomcat/) ([website](https://tomcat.apache.org/))
 - [Tor Proxy](tor/proxy/) ([website](https://www.torproject.org/))
 - [Traefik](traefik/) ([website](https://traefik.io/traefik/))
+- [Transmission](transmission/) ([website](https://transmissionbt.com/))
 - [Uptime Kuma](uptime-kuma/) ([website](https://uptime.kuma.pet/))
 - [Valkey](valkey/) ([website](https://valkey.io/))
 - [Vault](vault/) ([website](https://www.vaultproject.io/))
