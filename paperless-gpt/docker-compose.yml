@@ -1,6 +1,6 @@
 services:
   paperless-gpt:
-    image: icereed/paperless-gpt:v0.24.0
+    image: icereed/paperless-gpt:v0.25.0
     container_name: paperless-gpt
     environment:
       - PAPERLESS_BASE_URL=http://paperless:8000
