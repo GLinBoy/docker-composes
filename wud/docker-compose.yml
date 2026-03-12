@@ -1,6 +1,6 @@
 services:
   wud:
-    image: getwud/wud:8.2.0
+    image: getwud/wud:8.2.2
     container_name: wud
     environment:
       - TZ=Europe/Berlin
