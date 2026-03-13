@@ -1,6 +1,6 @@
 services:
   stirling-pdf:
-    image: stirlingtools/stirling-pdf:2.5.3
+    image: stirlingtools/stirling-pdf:2.7.1
     container_name: stirling-pdf
     ports:
       - "8080:8080"
