@@ -2,7 +2,7 @@ name: obsidian
 services:
   obsidian:
     container_name: obsidian
-    image: linuxserver/obsidian:1.11.7
+    image: linuxserver/obsidian:1.12.4
     security_opt:
       - seccomp:unconfined
     environment:
