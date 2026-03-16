@@ -2,7 +2,7 @@ version: "3.8"
 
 services:
   netbox: &netbox
-    image: netboxcommunity/netbox:v4.5-4.0.0
+    image: netboxcommunity/netbox:v4.5-4.0.1
     depends_on:
       - postgres
       - redis
