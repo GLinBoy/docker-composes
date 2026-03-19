@@ -1,6 +1,6 @@
 services:
   bookstack:
-    image: linuxserver/bookstack:25.12.4
+    image: linuxserver/bookstack:26.03.1
     container_name: bookstack
     environment:
       - PUID=1000
