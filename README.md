@@ -4,8 +4,8 @@ On this repository, I will share my docker composes. Feel free to use, edit, and
 
 ---
 
-- [ActiveMQ Artemis](activemq-artemis/) ([website](https://activemq.apache.org/components/artemis/))
-- [ActiveMQ Classic](activemq-classic/) ([website](https://activemq.apache.org/components/classic/))
+- [ActiveMQ Artemis](artemis/) ([website](https://artemis.apache.org/))
+- [ActiveMQ Classic](activemq/) ([website](https://activemq.apache.org/))
 - [Apache Web Server](apache/) ([website](https://httpd.apache.org/))
 - [ArangoDB](arangodb/) ([website](https://www.arangodb.com/))
 - [aria2c](aria2c/) ([website](https://aria2.github.io/))
@@ -14,7 +14,7 @@ On this repository, I will share my docker composes. Feel free to use, edit, and
 - [Bitwarden (Vaultwarden)](bitwarden/) ([website](https://bitwarden.com/), [Vaultwarden](https://github.com/dani-garcia/vaultwarden))
 - [BookStack](bookstack/) ([website](https://www.bookstackapp.com/))
 - [Cassandra](cassandra/) ([website](https://cassandra.apache.org))
-- [CockroachDB](CockroachDB/) ([website](https://www.cockroachlabs.com/))
+- [CockroachDB](cockroachdb/) ([website](https://www.cockroachlabs.com/))
 - [CouchDB](couchdb/) ([website](https://couchdb.apache.org/))
 - [DokuWiki](dokuwiki/) ([website](https://www.dokuwiki.org/))
 - [Dozzle](dozzle/) ([website](https://dozzle.dev))
