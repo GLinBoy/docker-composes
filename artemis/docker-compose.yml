@@ -1,8 +1,8 @@
-name: activemq-artemis
+name: artemis
 services:
-  activemq-artemis:
-    container_name: activemq-artemis
-    image: apache/activemq-artemis:2.44.0-alpine
+  artemis:
+    container_name: artemis
+    image: apache/artemis:2.52.0-alpine
     environment:
       ARTEMIS_USERNAME: admin
       ARTEMIS_PASSWORD: admin
@@ -14,7 +14,15 @@ services:
       - "8161:8161" # Web Console (HTTP)
       - "1099:1099" # JMX RMI Registry Port
     healthcheck:
-      test: wget --no-verbose --tries=1 --spider http://localhost:8161 || exit 1
+      test:
+        [
+          "CMD",
+          "wget",
+          "--no-verbose",
+          "--tries=1",
+          "--spider",
+          "http://localhost:8161",
+        ]
       interval: 1m
       timeout: 1s
       retries: 3
