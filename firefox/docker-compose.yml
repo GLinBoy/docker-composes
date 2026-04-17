@@ -2,7 +2,7 @@ name: firefox
 services:
   firefox:
     container_name: firefox
-    image: linuxserver/firefox:1148.0.2
+    image: linuxserver/firefox:1149.0.2
     security_opt:
       - seccomp:unconfined
     environment:
