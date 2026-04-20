@@ -2,13 +2,13 @@ name: cassandra
 services:
   cassandra-0:
     container_name: cassandra-0
-    image: cassandra:5.0.6-jammy
+    image: cassandra:5.0.8
     ports:
       - "9042:9042"
     environment:
       - CASSANDRA_SEEDS=cassandra-0,cassandra-1
     healthcheck:
-      test: ["CMD-SHELL", "[ $$(nodetool statusgossip) = running ]"]
+      test: [ "CMD-SHELL", "[ $$(nodetool statusgossip) = running ]" ]
       start_period: 60s
       interval: 1m
       timeout: 1s
@@ -17,11 +17,11 @@ services:
       - cassandra-network
   cassandra-1:
     container_name: cassandra-1
-    image: cassandra:5.0.6-jammy
+    image: cassandra:5.0.8
     environment:
       - CASSANDRA_SEEDS=cassandra-0,cassandra-1
     healthcheck:
-      test: ["CMD-SHELL", "[ $$(nodetool statusgossip) = running ]"]
+      test: [ "CMD-SHELL", "[ $$(nodetool statusgossip) = running ]" ]
       start_period: 60s
       interval: 1m
       timeout: 1s
