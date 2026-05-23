@@ -1,47 +1,151 @@
-version: "3.8"
+# ============================================================
+# ELK Stack — Production-Ready Docker Compose
+# ------------------------------------------------------------
+# Local usage : docker compose up -d
+# Server notes: Search for all "# SERVER:" comments below
+#               and apply the required changes before deploying.
+# ============================================================
 
 services:
+  # ----------------------------------------------------------
+  # ELASTICSEARCH
+  # SERVER: For a cluster, change discovery.type and add
+  #         cluster.initial_master_nodes / discovery.seed_hosts
+  # ----------------------------------------------------------
   elasticsearch:
-    image: docker.elastic.co/elasticsearch/elasticsearch:7.17.9
+    image: docker.elastic.co/elasticsearch/elasticsearch:9.4.1
+    container_name: elasticsearch
+    restart: unless-stopped
     environment:
       - discovery.type=single-node
+      - cluster.name=elk-cluster
+      - node.name=es-node-01
+      - bootstrap.memory_lock=true
+      # SERVER: Set to half of your server's available RAM (e.g. 4g for 8GB RAM)
+      - ES_JAVA_OPTS=-Xms512m -Xmx512m
+      # SERVER: Change to true and set up TLS + run:
+      #           docker exec -it elasticsearch bin/elasticsearch-service-tokens create elastic/kibana kibana-token
+      #         Then use ELASTICSEARCH_SERVICEACCOUNTTOKEN in Kibana instead of credentials.
       - xpack.security.enabled=false
+      - xpack.security.http.ssl.enabled=false
+    ulimits:
+      memlock:
+        soft: -1
+        hard: -1
+      nofile:
+        soft: 65536
+        hard: 65536
+    volumes:
+      - es_data:/usr/share/elasticsearch/data
     networks:
       - logging-network
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "curl -sf http://localhost:9200/_cluster/health || exit 1",
+        ]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 60s
+    # SERVER: Uncomment and bind to loopback only — never expose 9200 to the internet.
+    #         Use a reverse proxy (Nginx/Traefik) with TLS termination in front of Kibana.
+    # ports:
+    #   - "127.0.0.1:9200:9200"
 
+  # ----------------------------------------------------------
+  # LOGSTASH
+  # SERVER: Tune pipeline.workers to match your CPU core count.
+  #         Consider Filebeat → Logstash instead of raw GELF
+  #         to reduce UDP packet loss under high load.
+  # ----------------------------------------------------------
   logstash:
-    image: docker.elastic.co/logstash/logstash:7.17.9
+    image: docker.elastic.co/logstash/logstash:9.4.1
+    container_name: logstash
+    restart: unless-stopped
     depends_on:
-      - elasticsearch
-    ports:
-      - 12201:12201/udp
+      elasticsearch:
+        condition: service_healthy
+    environment:
+      # SERVER: Increase Xmx based on your expected log throughput.
+      - LS_JAVA_OPTS=-Xms256m -Xmx256m
     volumes:
       - ./logstash.conf:/usr/share/logstash/pipeline/logstash.conf:ro
+      # SERVER: Uncomment to provide a custom logstash.yml for pipeline tuning:
+      # - ./logstash.yml:/usr/share/logstash/config/logstash.yml:ro
+    ports:
+      # GELF UDP — used by Docker logging driver
+      # SERVER: Bind to a specific interface: "127.0.0.1:12201:12201/udp"
+      - "12201:12201/udp"
+      # Beats input (Filebeat, Metricbeat, etc.)
+      - "5044:5044"
     networks:
       - logging-network
+    healthcheck:
+      test: ["CMD-SHELL", "curl -sf http://localhost:9600 || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 90s
 
+  # ----------------------------------------------------------
+  # KIBANA
+  # No credentials needed — security is disabled on ES (local dev).
+  # SERVER: Enable security on ES, generate a service account token:
+  #           docker exec -it elasticsearch \
+  #             bin/elasticsearch-service-tokens create elastic/kibana kibana-token
+  #         Then replace the environment block with:
+  #           - ELASTICSEARCH_SERVICEACCOUNTTOKEN=<token>
+  #           - SERVER_PUBLICBASEURL=https://kibana.example.com
+  #         And place Kibana behind Nginx/Traefik with HTTPS.
+  #         Remove the ports block and proxy port 5601 internally.
+  # ----------------------------------------------------------
   kibana:
-    image: docker.elastic.co/kibana/kibana:7.17.9
+    image: docker.elastic.co/kibana/kibana:9.4.1
+    container_name: kibana
+    restart: unless-stopped
     depends_on:
-      - logstash
+      elasticsearch:
+        condition: service_healthy
+      logstash:
+        condition: service_healthy
+    environment:
+      - ELASTICSEARCH_HOSTS=http://elasticsearch:9200
+      - SERVER_PUBLICBASEURL=http://localhost:5601
+      # SERVER: Generate each key with: openssl rand -hex 32
+      - XPACK_SECURITY_ENCRYPTIONKEY=a32charrandumstring1234567890abc
+      - XPACK_REPORTING_ENCRYPTIONKEY=b32charrandumstring1234567890abc
+      - XPACK_ENCRYPTEDSAVEDOBJECTS_ENCRYPTIONKEY=c32charrandumstring1234567890abc
     ports:
-      - 5601:5601
+      # SERVER: Remove this — expose Kibana only via reverse proxy with HTTPS.
+      - "5601:5601"
     networks:
       - logging-network
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          'curl -sf http://localhost:5601/api/status | grep -q ''"level":"available"'' || exit 1',
+        ]
+      interval: 30s
+      timeout: 10s
+      retries: 10
+      start_period: 120s
 
-  httpd:
-    image: httpd:latest
-    depends_on:
-      - logstash
-    ports:
-      - 80:80
-    logging:
-      driver: gelf
-      options:
-        # Use udp://host.docker.internal:12201 when you are using Docker Desktop for Mac
-        # docs: https://docs.docker.com/docker-for-mac/networking/#i-want-to-connect-from-a-container-to-a-service-on-the-host
-        # issue: https://github.com/lvthillo/docker-elk/issues/1
-        gelf-address: "udp://localhost:12201"
+# ----------------------------------------------------------
+# VOLUMES — persists Elasticsearch data across restarts
+# SERVER: Bind to a specific host path for easier backups:
+#   es_data:
+#     driver: local
+#     driver_opts:
+#       type: none
+#       o: bind
+#       device: /data/elasticsearch
+# ----------------------------------------------------------
+volumes:
+  es_data:
+    driver: local
 
 networks:
   logging-network:
