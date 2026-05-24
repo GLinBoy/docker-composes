@@ -2,7 +2,7 @@ name: activemq
 services:
   activemq:
     container_name: activemq
-    image: apache/activemq:6.2.1
+    image: apache/activemq:6.2.4
     environment:
       ACTIVEMQ_ADMIN_LOGIN: admin
       ACTIVEMQ_ADMIN_PASSWORD: admin
