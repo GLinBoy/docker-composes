@@ -24,6 +24,7 @@ On this repository, I will share my docker composes. Feel free to use, edit, and
 - [Firefox](firefox/) ([website](https://www.mozilla.org/en-US/firefox/new/))
 - [Flink](flink/) ([website](https://flink.apache.org/))
 - [Gitea](gitea/) ([website](https://about.gitea.com/))
+- [Hermes Agent](hermes-agent/) ([website](https://hermes-agent.nousresearch.com/))
 - [Gogs](gogs/) ([website](https://gogs.io/))
 - [Grafana](grafana/) ([website](https://grafana.com/))
 - [HAProxy](haproxy/) ([website](https://www.haproxy.org/))
