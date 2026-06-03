@@ -1,0 +1,4 @@
+# Caddyfile
+:80 {
+    respond "Hello from Caddy!"
+}

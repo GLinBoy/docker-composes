@@ -1,0 +1,66 @@
+name: caddy
+
+services:
+  # Caddy Service
+  caddy:
+    image: caddy:2.9-alpine
+    container_name: caddy
+    # SERVER: Uncomment to ensure Caddy starts automatically on boot or failure
+    # restart: unless-stopped
+    environment:
+      - CADDY_ADMIN=${CADDY_ADMIN:-localhost:2019}
+      - CADDY_GRACE_PERIOD=${CADDY_GRACE_PERIOD:-10s}
+      - ACME_AGREE=${ACME_AGREE:-false}
+      - ACME_CA=${ACME_CA:-}
+      - CADDY_EMAIL=${CADDY_EMAIL:-}
+    volumes:
+      - ./caddy-config:/etc/caddy:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    # LOCAL: Expose both HTTP and HTTPS ports for local testing
+    # SERVER: Ensure firewall rules allow ports 80 and 443
+    ports:
+      - "80:80"
+      - "443:443"
+    # LOCAL: Uncomment the line below for host network mode (easy localhost proxying).
+    #        Note: If enabled, you must comment out the "ports" and "networks" sections.
+    # network_mode: host
+    networks:
+      - caddy-network
+    healthcheck:
+      test: ["CMD", "wget", "-q", "--spider", "http://localhost:2019/metrics"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 10s
+    labels:
+      - "com.docker.compose.service=caddy"
+    # SERVER: Uncomment and tune resource limits before deploying to production
+    # deploy:
+    #   resources:
+    #     limits:
+    #       cpus: '1.0'
+    #       memory: 512M
+    #     reservations:
+    #       cpus: '0.25'
+    #       memory: 128M
+
+volumes:
+  caddy_data:
+    driver: local
+    # SERVER: Use a bind mount for easier backup control:
+    # driver_opts:
+    #   type: none
+    #   o: bind
+    #   device: /data/caddy/data
+  caddy_config:
+    driver: local
+    # SERVER: Use a bind mount for easier backup control:
+    # driver_opts:
+    #   type: none
+    #   o: bind
+    #   device: /data/caddy/config
+
+networks:
+  caddy-network:
+    driver: bridge
