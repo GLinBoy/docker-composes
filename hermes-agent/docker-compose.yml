@@ -1,0 +1,149 @@
+name: hermes-agent
+
+services:
+  # Hermes Agent Gateway Service
+  hermes-gateway:
+    image: ${HERMES_IMAGE:-nousresearch/hermes-agent:latest}
+    container_name: hermes-gateway
+    restart: unless-stopped
+    init: true
+    depends_on: []
+    env_file:
+      - path: .env
+        required: false
+    # LOCAL: Uses host network mode for easier local development
+    # SERVER: For production isolation, comment out network_mode and uncomment
+    #         the ports + networks sections below
+    network_mode: host
+    # SERVER: Replace network_mode above with explicit ports + network:
+    # ports:
+    #   - "127.0.0.1:9119:9119"   # Dashboard — localhost only; use SSH tunnel for remote
+    #   - "3978:3978"              # Microsoft Teams (only if enabled)
+    # networks:
+    #   - hermes-network
+    volumes:
+      # LOCAL: Uses ~/.hermes as data directory
+      # SERVER: Replace with an absolute path for easier backup, e.g.:
+      #   - /data/hermes:/opt/data
+      - ${HERMES_DATA_DIR:-~/.hermes}:/opt/data
+    environment:
+      HERMES_UID: ${HERMES_UID:-10000}
+      HERMES_GID: ${HERMES_GID:-10000}
+      # LLM Providers (set at least one)
+      OPENROUTER_API_KEY: ${OPENROUTER_API_KEY:-}
+      NOVITA_API_KEY: ${NOVITA_API_KEY:-}
+      GOOGLE_API_KEY: ${GOOGLE_API_KEY:-}
+      GEMINI_API_KEY: ${GEMINI_API_KEY:-}
+      OLLAMA_API_KEY: ${OLLAMA_API_KEY:-}
+      GLM_API_KEY: ${GLM_API_KEY:-}
+      KIMI_API_KEY: ${KIMI_API_KEY:-}
+      ARCEEAI_API_KEY: ${ARCEEAI_API_KEY:-}
+      MINIMAX_API_KEY: ${MINIMAX_API_KEY:-}
+      OPENCODE_ZEN_API_KEY: ${OPENCODE_ZEN_API_KEY:-}
+      OPENCODE_GO_API_KEY: ${OPENCODE_GO_API_KEY:-}
+      HF_TOKEN: ${HF_TOKEN:-}
+      XIAOMI_API_KEY: ${XIAOMI_API_KEY:-}
+      # Tool API Keys
+      EXA_API_KEY: ${EXA_API_KEY:-}
+      PARALLEL_API_KEY: ${PARALLEL_API_KEY:-}
+      FIRECRAWL_API_KEY: ${FIRECRAWL_API_KEY:-}
+      FAL_KEY: ${FAL_KEY:-}
+      BROWSERBASE_API_KEY: ${BROWSERBASE_API_KEY:-}
+      BROWSERBASE_PROJECT_ID: ${BROWSERBASE_PROJECT_ID:-}
+      VOICE_TOOLS_OPENAI_KEY: ${VOICE_TOOLS_OPENAI_KEY:-}
+      # Messaging Platforms
+      SLACK_BOT_TOKEN: ${SLACK_BOT_TOKEN:-}
+      SLACK_APP_TOKEN: ${SLACK_APP_TOKEN:-}
+      TELEGRAM_BOT_TOKEN: ${TELEGRAM_BOT_TOKEN:-}
+      # Microsoft Teams
+      TEAMS_CLIENT_ID: ${TEAMS_CLIENT_ID:-}
+      TEAMS_CLIENT_SECRET: ${TEAMS_CLIENT_SECRET:-}
+      TEAMS_TENANT_ID: ${TEAMS_TENANT_ID:-}
+      # Google Chat
+      GOOGLE_CHAT_PROJECT_ID: ${GOOGLE_CHAT_PROJECT_ID:-}
+      GOOGLE_CHAT_SUBSCRIPTION_NAME: ${GOOGLE_CHAT_SUBSCRIPTION_NAME:-}
+      GOOGLE_CHAT_SERVICE_ACCOUNT_JSON: ${GOOGLE_CHAT_SERVICE_ACCOUNT_JSON:-}
+      # Configuration
+      TERMINAL_TIMEOUT: ${TERMINAL_TIMEOUT:-60}
+      TERMINAL_LIFETIME_SECONDS: ${TERMINAL_LIFETIME_SECONDS:-300}
+      BROWSERBASE_PROXIES: ${BROWSERBASE_PROXIES:-true}
+      BROWSER_INACTIVITY_TIMEOUT: ${BROWSER_INACTIVITY_TIMEOUT:-120}
+      # Advanced / Optional
+      GROQ_API_KEY: ${GROQ_API_KEY:-}
+      GITHUB_TOKEN: ${GITHUB_TOKEN:-}
+      HONCHO_API_KEY: ${HONCHO_API_KEY:-}
+      # SERVER: Uncomment to expose the OpenAI-compatible API server beyond localhost
+      # Requires API_SERVER_KEY set in .env (generate: openssl rand -hex 32)
+      # API_SERVER_HOST: "0.0.0.0"
+      # API_SERVER_KEY: ${API_SERVER_KEY:-}
+    healthcheck:
+      test: ["CMD-SHELL", "pgrep -f 'gateway' || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 30s
+    labels:
+      - "com.docker.compose.service=hermes-gateway"
+    # SERVER: Uncomment and tune resource limits before deploying to production
+    # deploy:
+    #   resources:
+    #     limits:
+    #       cpus: '2.0'
+    #       memory: 4G
+    #     reservations:
+    #       cpus: '0.5'
+    #       memory: 1G
+
+  # Hermes Dashboard Service
+  hermes-dashboard:
+    image: ${HERMES_IMAGE:-nousresearch/hermes-agent:latest}
+    container_name: hermes-dashboard
+    restart: unless-stopped
+    depends_on:
+      - hermes-gateway
+    env_file:
+      - path: .env
+        required: false
+    # LOCAL: Matches gateway host network so dashboard can reach it on localhost
+    # SERVER: If you switched gateway to bridge network above, do the same here
+    network_mode: host
+    volumes:
+      - ${HERMES_DATA_DIR:-~/.hermes}:/opt/data
+    environment:
+      HERMES_UID: ${HERMES_UID:-10000}
+      HERMES_GID: ${HERMES_GID:-10000}
+    # Dashboard binds to 127.0.0.1 — only reachable locally
+    # SERVER: Access remotely via SSH tunnel: ssh -L 9119:localhost:9119 user@host
+    # ⚠️  Never expose port 9119 directly without a reverse proxy + authentication
+    command: ["dashboard", "--host", "127.0.0.1", "--no-open"]
+    healthcheck:
+      test: ["CMD-SHELL", "curl -sf http://127.0.0.1:9119/health || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 20s
+    # SERVER: Uncomment and tune resource limits before deploying to production
+    # deploy:
+    #   resources:
+    #     limits:
+    #       cpus: '1.0'
+    #       memory: 1G
+    #     reservations:
+    #       cpus: '0.25'
+    #       memory: 512M
+
+# Named volume kept as fallback — not used when HERMES_DATA_DIR bind mount is active
+# SERVER: Prefer bind mount (set HERMES_DATA_DIR=/data/hermes in .env) for easier backups
+volumes:
+  hermes-data:
+    driver: local
+    # SERVER: Bind mount alternative:
+    # driver_opts:
+    #   type: none
+    #   o: bind
+    #   device: /data/hermes
+
+# Defined for reference — only active when network_mode: host is removed
+networks:
+  hermes-network:
+    driver: bridge
