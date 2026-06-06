@@ -1,33 +1,64 @@
-version: "3"
 name: ollama
+
 services:
   ollama:
+    image: ollama/ollama:0.30.6
     container_name: ollama
-    image: ollama/ollama:0.30.4
-    ports:
-      - "11434:11434"
     volumes:
       - ./ollama:/root/.ollama
-    # GPU support (turn off by commenting with # if you don't have an nvidia gpu)
-    deploy:
-      resources:
-        reservations:
-          devices:
-            - driver: nvidia
-              count: 1
-              capabilities:
-                - gpu
+    ports:
+      - "11434:11434"
+    networks:
+      - ollama-network
+    healthcheck:
+      test: ["CMD-SHELL", "curl -sf http://localhost:11434/api/tags || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 40s
+    # SERVER: Uncomment and tune for NVIDIA GPU support before deploying:
+    # deploy:
+    #   resources:
+    #     reservations:
+    #       devices:
+    #         - driver: nvidia
+    #           count: 1
+    #           capabilities:
+    #             - gpu
 
   open-webui:
+    image: ghcr.io/open-webui/open-webui:v0.9.6
     container_name: open-webui
-    image: ghcr.io/open-webui/open-webui:main
+    depends_on:
+      ollama:
+        condition: service_started
+    environment:
+      - OLLAMA_API_BASE_URL=http://ollama:11434/api
     volumes:
       - ./open_webui:/app/backend/data
-    depends_on:
-      - ollama
     ports:
-      - 3000:8080
-    environment:
-      - "OLLAMA_API_BASE_URL=http://ollama:11434/api"
+      - "3000:8080"
+    networks:
+      - ollama-network
+    healthcheck:
+      test: ["CMD-SHELL", "curl -sf http://localhost:8080/health || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 60s
+    # LOCAL: Enables host.docker.internal resolution on Docker Desktop (Mac/Windows)
     extra_hosts:
       - host.docker.internal:host-gateway
+    # SERVER: Uncomment and tune resource limits before deploying to production:
+    # deploy:
+    #   resources:
+    #     limits:
+    #       cpus: '1.0'
+    #       memory: 2G
+    #     reservations:
+    #       cpus: '0.5'
+    #       memory: 1G
+
+networks:
+  ollama-network:
+    driver: bridge
