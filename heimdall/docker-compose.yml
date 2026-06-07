@@ -1,6 +1,6 @@
 services:
   heimdall:
-    image: linuxserver/heimdall
+    image: linuxserver/heimdall:2.7.6
     container_name: heimdall
     environment:
       - PUID=1000
