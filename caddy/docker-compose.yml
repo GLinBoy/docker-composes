@@ -3,7 +3,7 @@ name: caddy
 services:
   # Caddy Service
   caddy:
-    image: caddy:2.9-alpine
+    image: caddy:2.11.4-alpine
     container_name: caddy
     # SERVER: Uncomment to ensure Caddy starts automatically on boot or failure
     # restart: unless-stopped
