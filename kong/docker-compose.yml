@@ -30,7 +30,7 @@ services:
   # Kong database migration
   #######################################
   kong-migration:
-    image: kong:3.9.2
+    image: kong:3.9.3
     command: "kong migrations bootstrap"
     networks:
       - kong-net
@@ -46,7 +46,7 @@ services:
   # Kong: The API Gateway
   #######################################
   kong:
-    image: kong:3.9.1
+    image: kong:3.9.3
     restart: always
     networks:
       - kong-net
