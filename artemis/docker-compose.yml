@@ -2,7 +2,7 @@ name: artemis
 services:
   artemis:
     container_name: artemis
-    image: apache/artemis:2.54.0-alpine
+    image: apache/artemis:2.55.0-alpine
     environment:
       ARTEMIS_USERNAME: admin
       ARTEMIS_PASSWORD: admin
