@@ -2,7 +2,7 @@ name: kafka
 
 services:
   broker:
-    image: apache/kafka:4.3.0
+    image: apache/kafka:4.3.1
     container_name: kafka-broker
     environment:
       KAFKA_PROCESS_ROLES: broker,controller
@@ -23,7 +23,13 @@ services:
     networks:
       - kafka-network
     healthcheck:
-      test: ["CMD", "kafka-broker-api-versions.sh", "--bootstrap-server", "localhost:${KAFKA_PORT:-9092}"]
+      test:
+        [
+          "CMD",
+          "kafka-broker-api-versions.sh",
+          "--bootstrap-server",
+          "localhost:${KAFKA_PORT:-9092}",
+        ]
       interval: 30s
       timeout: 10s
       retries: 5
