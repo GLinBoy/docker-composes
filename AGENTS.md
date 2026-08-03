@@ -15,6 +15,10 @@ This document provides essential guidance for AI assistants contributing to this
 
 **DO NOT add `restart: unless-stopped`** or any restart policy unless explicitly requested. Containers should stop when the host system restarts to save resources.
 
+### Timezone
+
+**Use `UTC` (UTC+0) by default** everywhere a timezone is required in compose files — the `TZ` environment variable, `PHP_TIMEZONE`, cron schedules, config files, etc. — unless a specific timezone is explicitly requested.
+
 ### File Naming
 
 - Compose folders: lowercase, hyphenated (e.g., `my-service/`)
@@ -23,6 +27,7 @@ This document provides essential guidance for AI assistants contributing to this
 ### README Updates
 
 When adding new compose files, add an entry to the root [README.md](README.md) in **alphabetical order** following the existing format:
+
 ```markdown
 - [Service Name](folder/) ([website](https://example.com))
 ```
@@ -30,6 +35,7 @@ When adding new compose files, add an entry to the root [README.md](README.md) i
 ## Quick Reference
 
 For detailed conventions, see [CONTRIBUTING.md](CONTRIBUTING.md) section:
+
 - Docker Compose Conventions (file structure, service order, healthchecks, image versioning, etc.)
 - Adding a New Stack
 - Testing Locally
