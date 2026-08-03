@@ -62,11 +62,11 @@ docker-composes/
 
 **Every folder must contain at minimum:**
 
-| File | Required | Purpose |
-|---|---|---|
-| `docker-compose.yml` | ✅ | The compose definition |
-| `.env.example` | ✅ | Documents all required env variables (no real values) |
-| `README.md` | ✅ | Local usage, verification steps, server checklist |
+| File                 | Required | Purpose                                               |
+| -------------------- | -------- | ----------------------------------------------------- |
+| `docker-compose.yml` | ✅       | The compose definition                                |
+| `.env.example`       | ✅       | Documents all required env variables (no real values) |
+| `README.md`          | ✅       | Local usage, verification steps, server checklist     |
 
 ---
 
@@ -77,13 +77,13 @@ docker-composes/
 Every `docker-compose.yml` must begin with a `name` field and follow this top-level key order:
 
 ```yaml
-name: <project-name>   # 1. Always first — lowercase, hyphenated (e.g. elk, my-stack)
+name: <project-name> # 1. Always first — lowercase, hyphenated (e.g. elk, my-stack)
 
-services: ...          # 2. Service definitions
-volumes: ...           # 3. Named volumes (omit section if none)
-networks: ...          # 4. Custom networks (omit section if none)
-configs: ...           # 5. Configs (omit section if none)
-secrets: ...           # 6. Secrets (omit section if none)
+services: ... # 2. Service definitions
+volumes: ... # 3. Named volumes (omit section if none)
+networks: ... # 4. Custom networks (omit section if none)
+configs: ... # 5. Configs (omit section if none)
+secrets: ... # 6. Secrets (omit section if none)
 ```
 
 > ⚠️ The legacy `version:` field must **not** be included — it is deprecated since Compose v2.
@@ -97,17 +97,17 @@ Keys inside every service block must appear in this order:
 ```yaml
 services:
   my-service:
-    image:            # 1. Image — pinned to exact version tag
-    container_name:   # 2. Explicit container name
-    restart:          # 3. Restart policy
-    depends_on:       # 4. Service dependencies (with condition:)
-    environment:      # 5. Environment variables (or env_file:)
-    volumes:          # 6. Volume mounts
-    ports:            # 7. Port mappings
-    networks:         # 8. Network membership
-    healthcheck:      # 9. Health check — always required
-    labels:           # 10. Labels (if any)
-    deploy:           # 11. Resource limits (commented out for local, enabled on server)
+    image: # 1. Image — pinned to exact version tag
+    container_name: # 2. Explicit container name
+    restart: # 3. Restart policy
+    depends_on: # 4. Service dependencies (with condition:)
+    environment: # 5. Environment variables (or env_file:)
+    volumes: # 6. Volume mounts
+    ports: # 7. Port mappings
+    networks: # 8. Network membership
+    healthcheck: # 9. Health check — always required
+    labels: # 10. Labels (if any)
+    deploy: # 11. Resource limits (commented out for local, enabled on server)
 ```
 
 ---
@@ -122,7 +122,7 @@ healthcheck:
   interval: 30s
   timeout: 10s
   retries: 5
-  start_period: 30s   # set based on realistic startup time of the service
+  start_period: 30s # set based on realistic startup time of the service
 ```
 
 Use the appropriate test command per service type:
@@ -154,33 +154,51 @@ test: ["CMD", "rabbitmq-diagnostics", "ping"]
 
 ### 4. Image Versioning
 
-- **Always pin to an exact version tag.** Never use `latest` or a bare image name.
-- **Prefer Alpine or slim variants** when available — they are smaller and have a reduced attack surface.
-- Use the format `name:MAJOR.MINOR-alpine` or `name:MAJOR.MINOR.PATCH-alpine`.
+**All image versions are read from env variables** in `.env.example` / `.env` and referenced
+in compose with a fallback default. Never hardcode a version tag inside `docker-compose.yml`.
+
+- **Application images** (the main product, e.g. an app server) use a `latest` fallback default,
+  with the **exact version** pinned in `.env.example` / `.env`.
 
 ```yaml
-# ✅ Correct
-image: postgres:17.2-alpine
-image: redis:7.4-alpine
-image: nginx:1.27-alpine
+# ✅ Correct — app version read from env, defaults to latest in compose
+image: ghcr.io/immich-app/immich-server:${IMMICH_VERSION:-latest}
 
-# ❌ Wrong
+# .env.example / .env must contain the exact version to deploy
+# IMMICH_VERSION=v3.1.0
+```
+
+- **Dependency images** (databases, caches, proxies, etc.) use an **exact-pinned fallback**
+  default — never `latest` or a bare image name — so an accidental upgrade can't break a stack.
+
+```yaml
+# ✅ Correct — dependency image read from env, exact-pinned fallback
+image: ${DATABASE_IMAGE:-postgres:17.2-alpine}
+image: ${REDIS_IMAGE:-redis:7.4-alpine}
+image: ${PROXY_IMAGE:-nginx:1.27-alpine}
+
+# ❌ Wrong — no version variable, or defaulting to latest
 image: postgres:latest
 image: redis
 image: nginx:latest
 ```
 
+- **Prefer Alpine or slim variants** when available — they are smaller and have a reduced attack surface.
+- Use the format `name:MAJOR.MINOR-alpine` or `name:MAJOR.MINOR.PATCH-alpine`.
+- To update an app or dependency, bump the exact value in `.env` and re-run
+  `docker compose up -d` — no compose file changes required.
+
 ---
 
 ### 5. Naming Conventions
 
-| Field | Convention | Example |
-|---|---|---|
-| `name` (top-level) | lowercase, hyphenated | `my-stack` |
-| `container_name` | lowercase, hyphenated | `my-stack-db` |
-| Volume names | lowercase, underscore-separated | `postgres_data` |
-| Network names | lowercase, hyphenated, suffix `-network` | `backend-network` |
-| Folder name | lowercase, hyphenated, matches `name` | `my-stack/` |
+| Field              | Convention                               | Example           |
+| ------------------ | ---------------------------------------- | ----------------- |
+| `name` (top-level) | lowercase, hyphenated                    | `my-stack`        |
+| `container_name`   | lowercase, hyphenated                    | `my-stack-db`     |
+| Volume names       | lowercase, underscore-separated          | `postgres_data`   |
+| Network names      | lowercase, hyphenated, suffix `-network` | `backend-network` |
+| Folder name        | lowercase, hyphenated, matches `name`    | `my-stack/`       |
 
 ---
 
