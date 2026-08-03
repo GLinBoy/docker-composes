@@ -1,0 +1,99 @@
+name: forgejo
+
+services:
+  server:
+    image: codeberg.org/forgejo/forgejo:16.0.2
+    container_name: forgejo
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      - USER_UID=${FORGEJO_UID:-1000}
+      - USER_GID=${FORGEJO_GID:-1000}
+      - TZ=${FORGEJO_TZ:-UTC}
+      - FORGEJO__database__DB_TYPE=postgres
+      - FORGEJO__database__HOST=db:5432
+      - FORGEJO__database__NAME=${POSTGRES_DB}
+      - FORGEJO__database__USER=${POSTGRES_USER}
+      - FORGEJO__database__PASSWD=${POSTGRES_PASSWORD}
+    volumes:
+      - forgejo_data:/data
+      - /etc/timezone:/etc/timezone:ro
+      - /etc/localtime:/etc/localtime:ro
+    ports:
+      - "3000:3000"
+      - "222:22"
+    networks:
+      - forgejo-network
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "wget",
+          "--no-verbose",
+          "--tries=1",
+          "--spider",
+          "http://localhost:3000",
+        ]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 60s
+    # SERVER: Uncomment and tune before deploying to production
+    # deploy:
+    #   resources:
+    #     limits:
+    #       cpus: '2.0'
+    #       memory: 2G
+    #     reservations:
+    #       cpus: '0.25'
+    #       memory: 512M
+
+  db:
+    image: postgres:18.4-alpine3.23
+    container_name: forgejo-db
+    environment:
+      - POSTGRES_USER=${POSTGRES_USER}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+      - POSTGRES_DB=${POSTGRES_DB}
+    volumes:
+      # Postgres 18+ stores data in /var/lib/postgresql/<major>/data — mount the
+      # parent directory so pg_upgrade --link works across major upgrades
+      - postgres_data:/var/lib/postgresql
+    networks:
+      - forgejo-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 30s
+    # SERVER: Uncomment and tune before deploying to production
+    # deploy:
+    #   resources:
+    #     limits:
+    #       cpus: '1.0'
+    #       memory: 1G
+    #     reservations:
+    #       cpus: '0.1'
+    #       memory: 256M
+
+volumes:
+  forgejo_data:
+    driver: local
+    # SERVER: Use a bind mount for easier backup control:
+    # driver_opts:
+    #   type: none
+    #   o: bind
+    #   device: /data/forgejo
+  postgres_data:
+    driver: local
+    # SERVER: Use a bind mount for easier backup control:
+    # driver_opts:
+    #   type: none
+    #   o: bind
+    #   device: /data/forgejo-postgres
+
+networks:
+  forgejo-network:
+    driver: bridge
