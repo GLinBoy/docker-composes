@@ -1,0 +1,46 @@
+name: loki
+
+services:
+  loki:
+    image: ${LOKI_IMAGE:-grafana/loki:latest}
+    container_name: loki
+    environment:
+      TZ: ${LOKI_TZ:-UTC}
+    volumes:
+      - loki-data:/loki
+      # SERVER: Prefer a bind mount for easier backup control:
+      # - /data/loki:/loki
+    ports:
+      - "${LOKI_PORT:-3100}:3100"
+    networks:
+      - loki-network
+    healthcheck:
+      # The image is distroless (no shell/wget/curl), so use Loki's built-in
+      # check: it GETs http://localhost:3100/ready and exits 0 when healthy
+      test: ["CMD", "/usr/bin/loki", "-health"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 30s
+    # SERVER: Uncomment and tune resource limits before deploying to production
+    # deploy:
+    #   resources:
+    #     limits:
+    #       cpus: '1.0'
+    #       memory: 1G
+    #     reservations:
+    #       cpus: '0.25'
+    #       memory: 256M
+
+volumes:
+  loki-data:
+    driver: local
+    # SERVER: Bind mount alternative:
+    # driver_opts:
+    #   type: none
+    #   o: bind
+    #   device: /data/loki
+
+networks:
+  loki-network:
+    driver: bridge
