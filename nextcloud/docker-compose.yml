@@ -1,0 +1,67 @@
+name: nextcloud-aio # Must stay nextcloud-aio so AIO adds its sibling containers to the same compose project
+
+services:
+  # Nextcloud All-in-One master container - orchestrates the whole Nextcloud stack
+  nextcloud-aio-mastercontainer:
+    image: nextcloud/all-in-one:${NEXTCLOUD_AIO_VERSION:-latest}
+    container_name: nextcloud-aio-mastercontainer # Do not change - AIO relies on this exact name
+    init: true # Required: correctly forwards signals (e.g. stop) to the spawned containers
+    # No restart policy per AGENTS.md - the stack stops when the host restarts.
+    # SERVER: AIO's official compose uses "restart: always" so the whole stack comes
+    #         back up after a reboot. Add it here if you want that behaviour.
+    environment:
+      TZ: ${TZ:-Etc/UTC}
+      # SERVER: set to 127.0.0.1 when running behind a reverse proxy on the same host
+      APACHE_IP_BINDING: ${APACHE_IP_BINDING:-0.0.0.0}
+      NEXTCLOUD_DATADIR: ${NEXTCLOUD_DATADIR:-} # empty = default Docker volume; set BEFORE first start
+      NEXTCLOUD_MOUNT: ${NEXTCLOUD_MOUNT:-} # empty = disabled; lets Nextcloud access extra host dirs
+      NEXTCLOUD_UPLOAD_LIMIT: ${NEXTCLOUD_UPLOAD_LIMIT:-16G}
+      NEXTCLOUD_MAX_TIME: ${NEXTCLOUD_MAX_TIME:-3600}
+      NEXTCLOUD_MEMORY_LIMIT: ${NEXTCLOUD_MEMORY_LIMIT:-512M}
+      AIO_LOG_LEVEL: ${AIO_LOG_LEVEL:-} # debug | info | warn | error - empty = default
+    volumes:
+      # Do not change - required for the built-in backup solution
+      - nextcloud_aio_mastercontainer:/mnt/docker-aio-config
+      # Required: lets the master container manage the AIO sibling containers
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    ports:
+      - "${NEXTCLOUD_HTTP_PORT:-80}:80" # Redirect to Nextcloud / used for the ACME http-challenge
+      - "${NEXTCLOUD_AIO_PORT:-8080}:8080" # AIO interface (self-signed certificate)
+      - "${NEXTCLOUD_HTTPS_PORT:-8443}:8443" # AIO interface with valid certificate
+    networks:
+      - nextcloud-aio
+    healthcheck:
+      test: ["CMD-SHELL", "curl -sfk https://localhost:8080/ || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 60s
+    labels:
+      - "com.docker.compose.service=nextcloud-aio-mastercontainer"
+    # SERVER: Uncomment if SELinux is enabled (allows access to the docker socket)
+    # security_opt:
+    #   - label:disable
+    # SERVER: Uncomment for hardware acceleration - only if /dev/dri exists on the host!
+    # devices:
+    #   - /dev/dri
+    # SERVER: Uncomment and tune resource limits before deploying to production
+    # deploy:
+    #   resources:
+    #     limits:
+    #       cpus: '2.0'
+    #       memory: 2G
+    #     reservations:
+    #       cpus: '0.5'
+    #       memory: 512M
+
+volumes:
+  nextcloud_aio_mastercontainer:
+    name: nextcloud_aio_mastercontainer # Do not change - required for the built-in backup solution
+
+networks:
+  nextcloud-aio:
+    name: nextcloud-aio # AIO automatically connects its sibling containers to this network
+    driver: bridge
+    # SERVER: Custom MTU for the docker network (e.g. when using VPNs), see AIO docs:
+    # driver_opts:
+    #   com.docker.network.driver.mtu: 1440
