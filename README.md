@@ -33,6 +33,7 @@ On this repository, I will share my docker composes. Feel free to use, edit, and
 - [Home Assistant](home-assistant/) ([website](https://www.home-assistant.io/))
 - [Homer](homer/) ([website](https://github.com/bastienwirtz/homer))
 - [Immich](immich/) ([website](https://immich.app/))
+- [InfluxDB](influxdb/) ([website](https://www.influxdata.com/))
 - [IT-Tools](it-tools/) ([website](https://it-tools.tech/))
 - [Jenkins](jenkins/) ([website](https://www.jenkins.io/))
 - [Jellyfin](jellyfin/) ([website](https://jellyfin.org/))
