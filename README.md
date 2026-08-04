@@ -53,6 +53,7 @@ On this repository, I will share my docker composes. Feel free to use, edit, and
 - [n8n](n8n/) ([website](https://n8n.io/))
 - [NATS](nats/) ([website](https://nats.io/))
 - [NetBox](netbox-docker/) ([website](https://github.com/netbox-community/netbox-docker))
+- [Nextcloud](nextcloud/) ([website](https://nextcloud.com/))
 - [Nginx](nginx/) ([website](https://nginx.org/))
 - [Nginx Proxy Manager](nginx-proxy-manager/) ([website](https://nginxproxymanager.com/))
 - [Obsidian](obsidian/) ([website](https://obsidian.md/))
