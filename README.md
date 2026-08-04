@@ -44,6 +44,7 @@ On this repository, I will share my docker composes. Feel free to use, edit, and
 - [Kong](kong/) ([website](https://konghq.com/))
 - [LAMP](lamp/) ([Linux](https://www.linux.org), [GNU](https://www.gnu.org), [APACHE](https://httpd.apache.org/), [MySQL](https://www.mysql.com/), [PHP](https://www.php.net/))
 - [Linkwarden](linkwarden/) ([website](https://github.com/linkwarden/linkwarden))
+- [Loki](loki/) ([website](https://grafana.com/oss/loki/))
 - [MailHog](mailhog/) ([website](https://mailcatcher.me/))
 - [Mailrise](mailrise/) ([website](https://github.com/YoRyan/mailrise))
 - [MariaDB](mariadb/) ([website](https://mariadb.org/))
