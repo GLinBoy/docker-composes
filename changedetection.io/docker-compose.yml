@@ -1,0 +1,101 @@
+name: changedetection
+
+services:
+  changedetection:
+    image: ${CHANGEDETECTION_IMAGE:-ghcr.io/dgtlmoon/changedetection.io:latest}
+    container_name: changedetection
+    depends_on:
+      browser-sockpuppet-chrome:
+        condition: service_healthy
+    environment:
+      PORT: "5000"
+      TZ: ${CHANGEDETECTION_TZ:-UTC}
+      # Public base URL of this install (no trailing slash), used in notification links
+      BASE_URL: ${BASE_URL:-}
+      # Chrome/JS fetching via the sockpuppetbrowser service below
+      PLAYWRIGHT_DRIVER_URL: ${PLAYWRIGHT_DRIVER_URL:-ws://browser-sockpuppet-chrome:3000}
+      # Default number of parallel/concurrent fetchers
+      FETCH_WORKERS: ${FETCH_WORKERS:-10}
+      # Log output levels: TRACE, DEBUG (default), INFO, SUCCESS, WARNING, ERROR, CRITICAL
+      LOGGER_LEVEL: ${LOGGER_LEVEL:-INFO}
+      # SERVER: Uncomment to disable the version-check / telemetry service
+      # DISABLE_VERSION_CHECK: "true"
+    volumes:
+      - changedetection-data:/datastore
+      # SERVER: Prefer a bind mount for easier backup control:
+      # - /data/changedetection:/datastore
+    ports:
+      - "${CHANGEDETECTION_PORT:-5000}:5000"
+    networks:
+      - changedetection-network
+    healthcheck:
+      # The image is python:3.11-slim (no curl/wget), so probe the web UI with urllib
+      test:
+        [
+          "CMD",
+          "python",
+          "-c",
+          "import urllib.request as u,sys; sys.exit(0 if u.urlopen('http://127.0.0.1:5000/', timeout=5).status == 200 else 1)",
+        ]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 30s
+    # SERVER: Uncomment and tune resource limits before deploying to production
+    # deploy:
+    #   resources:
+    #     limits:
+    #       cpus: '1.0'
+    #       memory: 1G
+    #     reservations:
+    #       cpus: '0.25'
+    #       memory: 256M
+
+  browser-sockpuppet-chrome:
+    image: ${SOCKPUPPET_IMAGE:-dgtlmoon/sockpuppetbrowser:0.0.3}
+    container_name: browser-sockpuppet-chrome
+    cap_add:
+      # Chrome needs SYS_ADMIN to run reliably inside a container
+      - SYS_ADMIN
+    environment:
+      SCREEN_WIDTH: ${SCREEN_WIDTH:-1920}
+      SCREEN_HEIGHT: ${SCREEN_HEIGHT:-1024}
+      SCREEN_DEPTH: ${SCREEN_DEPTH:-16}
+      MAX_CONCURRENT_CHROME_PROCESSES: ${MAX_CONCURRENT_CHROME_PROCESSES:-10}
+      # SERVER: Enable headful mode (Xvfb virtual display) if sites block headless Chrome
+      # CHROME_HEADFUL: "true"
+    networks:
+      - changedetection-network
+    healthcheck:
+      # Official upstream check: verifies port 3000 answers and the /stats endpoint on 8080
+      test:
+        [
+          "CMD-SHELL",
+          "python3 /usr/src/app/docker-health-check.py --host http://localhost",
+        ]
+      interval: 30s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+    # SERVER: Uncomment and tune resource limits before deploying to production
+    # deploy:
+    #   resources:
+    #     limits:
+    #       cpus: '2.0'
+    #       memory: 2G
+    #     reservations:
+    #       cpus: '0.5'
+    #       memory: 512M
+
+volumes:
+  changedetection-data:
+    driver: local
+    # SERVER: Bind mount alternative:
+    # driver_opts:
+    #   type: none
+    #   o: bind
+    #   device: /data/changedetection
+
+networks:
+  changedetection-network:
+    driver: bridge
