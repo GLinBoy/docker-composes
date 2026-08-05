@@ -14,6 +14,7 @@ On this repository, I will share my docker composes. Feel free to use, edit, and
 - [BookStack](bookstack/) ([website](https://www.bookstackapp.com/))
 - [Caddy](caddy/) ([website](https://caddyserver.com/))
 - [Cassandra](cassandra/) ([website](https://cassandra.apache.org))
+- [changedetection.io](changedetection.io/) ([website](https://changedetection.io))
 - [CockroachDB](cockroachdb/) ([website](https://www.cockroachlabs.com/))
 - [CouchDB](couchdb/) ([website](https://couchdb.apache.org/))
 - [DokuWiki](dokuwiki/) ([website](https://www.dokuwiki.org/))
