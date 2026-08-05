@@ -10,6 +10,7 @@ On this repository, I will share my docker composes. Feel free to use, edit, and
 - [ArangoDB](arangodb/) ([website](https://www.arangodb.com/))
 - [aria2c](aria2c/) ([website](https://aria2.github.io/))
 - [ariang](aria2c/) ([website](https://github.com/mayswind/AriaNg))
+- [Authentik](authentik/) ([website](https://goauthentik.io/))
 - [Beszel](beszel/) ([website](https://beszel.dev/))
 - [BookStack](bookstack/) ([website](https://www.bookstackapp.com/))
 - [Caddy](caddy/) ([website](https://caddyserver.com/))
