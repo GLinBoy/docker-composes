@@ -1,0 +1,138 @@
+name: mattermost
+
+services:
+  mattermost:
+    image: ${MATTERMOST_IMAGE:-mattermost/mattermost-enterprise-edition:latest}
+    container_name: mattermost
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      TZ: ${MATTERMOST_TZ:-UTC}
+      # Database connection (service name `postgres`, port 5432)
+      MM_SQLSETTINGS_DRIVERNAME: postgres
+      MM_SQLSETTINGS_DATASOURCE: "postgres://${POSTGRES_USER:-mmuser}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-mattermost}?sslmode=disable&connect_timeout=10"
+      # Local search index — keep Bleve data on the named volume instead of /tmp
+      MM_BLEVESETTINGS_INDEXDIR: /mattermost/bleve-indexes
+      # Public site URL — set to your real domain behind a reverse proxy
+      MM_SERVICESETTINGS_SITEURL: ${MATTERMOST_SITE_URL:-http://localhost:8065}
+    volumes:
+      - mattermost-config:/mattermost/config
+      - mattermost-data:/mattermost/data
+      - mattermost-logs:/mattermost/logs
+      - mattermost-plugins:/mattermost/plugins
+      - mattermost-client-plugins:/mattermost/client/plugins
+      - mattermost-bleve-indexes:/mattermost/bleve-indexes
+      # SERVER: Prefer bind mounts for easier backup control (see README):
+      # - /data/mattermost/config:/mattermost/config
+      # - /data/mattermost/data:/mattermost/data
+      # - /data/mattermost/logs:/mattermost/logs
+      # - /data/mattermost/plugins:/mattermost/plugins
+      # - /data/mattermost/client/plugins:/mattermost/client/plugins
+      # - /data/mattermost/bleve-indexes:/mattermost/bleve-indexes
+    ports:
+      - "${MATTERMOST_PORT:-8065}:8065"
+    networks:
+      - mattermost-network
+    healthcheck:
+      # The image is distroless (no shell/curl/wget), so mirror the image's
+      # built-in healthcheck: mmctl reports server status over the local unix
+      # socket (the image sets MM_SERVICESETTINGS_ENABLELOCALMODE=true)
+      test: ["CMD", "/mattermost/bin/mmctl", "system", "status", "--local"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 30s
+    # SERVER: Uncomment and tune resource limits before deploying to production
+    # deploy:
+    #   resources:
+    #     limits:
+    #       cpus: '4.0'
+    #       memory: 4G
+    #     reservations:
+    #       cpus: '1.0'
+    #       memory: 1G
+
+  postgres:
+    image: ${MATTERMOST_POSTGRES_IMAGE:-postgres:18-alpine}
+    container_name: mattermost-postgres
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-mmuser}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB:-mattermost}
+    volumes:
+      - mattermost-postgres:/var/lib/postgresql/data
+      # SERVER: Prefer a bind mount for easier backup control:
+      # - /data/mattermost/postgres:/var/lib/postgresql/data
+    networks:
+      - mattermost-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 30s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+    # SERVER: Uncomment and tune resource limits before deploying to production
+    # deploy:
+    #   resources:
+    #     limits:
+    #       cpus: '1.0'
+    #       memory: 1G
+    #     reservations:
+    #       cpus: '0.25'
+    #       memory: 256M
+
+volumes:
+  mattermost-config:
+    driver: local
+    # SERVER: Use a bind mount for easier backup control:
+    # driver_opts:
+    #   type: none
+    #   o: bind
+    #   device: /data/mattermost/config
+  mattermost-data:
+    driver: local
+    # SERVER: Use a bind mount for easier backup control:
+    # driver_opts:
+    #   type: none
+    #   o: bind
+    #   device: /data/mattermost/data
+  mattermost-logs:
+    driver: local
+    # SERVER: Use a bind mount for easier backup control:
+    # driver_opts:
+    #   type: none
+    #   o: bind
+    #   device: /data/mattermost/logs
+  mattermost-plugins:
+    driver: local
+    # SERVER: Use a bind mount for easier backup control:
+    # driver_opts:
+    #   type: none
+    #   o: bind
+    #   device: /data/mattermost/plugins
+  mattermost-client-plugins:
+    driver: local
+    # SERVER: Use a bind mount for easier backup control:
+    # driver_opts:
+    #   type: none
+    #   o: bind
+    #   device: /data/mattermost/client/plugins
+  mattermost-bleve-indexes:
+    driver: local
+    # SERVER: Use a bind mount for easier backup control:
+    # driver_opts:
+    #   type: none
+    #   o: bind
+    #   device: /data/mattermost/bleve-indexes
+  mattermost-postgres:
+    driver: local
+    # SERVER: Use a bind mount for easier backup control:
+    # driver_opts:
+    #   type: none
+    #   o: bind
+    #   device: /data/mattermost/postgres
+
+networks:
+  mattermost-network:
+    driver: bridge
