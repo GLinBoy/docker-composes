@@ -50,6 +50,7 @@ On this repository, I will share my docker composes. Feel free to use, edit, and
 - [MailHog](mailhog/) ([website](https://mailcatcher.me/))
 - [Mailrise](mailrise/) ([website](https://github.com/YoRyan/mailrise))
 - [MariaDB](mariadb/) ([website](https://mariadb.org/))
+- [Mattermost](mattermost/) ([website](https://mattermost.com/))
 - [MinIO](minio/) ([website](https://min.io/))
 - [MongoDB](mongodb/) ([website](https://www.mongodb.com/))
 - [Mosquitto](mosquitto/) ([website](https://mosquitto.org/))
