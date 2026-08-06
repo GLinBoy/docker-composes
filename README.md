@@ -29,6 +29,7 @@ On this repository, I will share my docker composes. Feel free to use, edit, and
 - [Gitea](gitea/) ([website](https://about.gitea.com/))
 - [Hermes Agent](hermes-agent/) ([website](https://hermes-agent.nousresearch.com/))
 - [Gogs](gogs/) ([website](https://gogs.io/))
+- [Gotify](gotify/) ([website](https://gotify.net/))
 - [Grafana](grafana/) ([website](https://grafana.com/))
 - [HAProxy](haproxy/) ([website](https://www.haproxy.org/))
 - [Heimdall](heimdall/) ([website](https://heimdall.site/))
