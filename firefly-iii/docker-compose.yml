@@ -1,0 +1,122 @@
+name: firefly-iii
+
+services:
+  app:
+    image: fireflyiii/core:${FIREFLYIII_VERSION:-latest}
+    container_name: firefly-iii-app
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      - TZ=${TZ:-Etc/UTC}
+      - APP_URL=${APP_URL:-http://localhost:8080}
+      - APP_KEY=${APP_KEY}
+      - DB_CONNECTION=mariadb
+      - DB_HOST=db
+      - DB_PORT=3306
+      - DB_DATABASE=${DB_DATABASE:-firefly}
+      - DB_USERNAME=${DB_USERNAME:-firefly}
+      - DB_PASSWORD=${DB_PASSWORD}
+      - TRUSTED_PROXIES=${TRUSTED_PROXIES:-**}
+      - STATIC_CRON_TOKEN=${STATIC_CRON_TOKEN}
+    volumes:
+      - upload_data:/var/www/html/storage/upload
+    ports:
+      - "${FIREFLYIII_PORT:-8080}:8080"
+    networks:
+      - firefly-network
+    healthcheck:
+      test: ["CMD-SHELL", "curl -sf http://localhost:8080/healthcheck || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 120s
+    # SERVER: Uncomment and tune resource limits before deploying to production
+    # deploy:
+    #   resources:
+    #     limits:
+    #       cpus: '1.0'
+    #       memory: 512M
+    #     reservations:
+    #       cpus: '0.25'
+    #       memory: 256M
+
+  db:
+    image: ${FIREFLYIII_DATABASE_IMAGE:-mariadb:12.3.2}
+    container_name: firefly-iii-db
+    environment:
+      - MARIADB_DATABASE=${DB_DATABASE:-firefly}
+      - MARIADB_USER=${DB_USERNAME:-firefly}
+      - MARIADB_PASSWORD=${DB_PASSWORD}
+      - MARIADB_ROOT_PASSWORD=${DB_ROOT_PASSWORD}
+    volumes:
+      - db_data:/var/lib/mysql
+    networks:
+      - firefly-network
+    healthcheck:
+      test: ["CMD", "healthcheck.sh", "--su-mysql", "--connect", "--innodb_initialized"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 30s
+    # SERVER: Uncomment and tune resource limits before deploying to production
+    # deploy:
+    #   resources:
+    #     limits:
+    #       cpus: '1.0'
+    #       memory: 1G
+    #     reservations:
+    #       cpus: '0.25'
+    #       memory: 256M
+
+  cron:
+    # Runs recurring transactions and bill reminders via Firefly III's cron endpoint
+    image: ${FIREFLYIII_CRON_IMAGE:-alpine:3.23}
+    container_name: firefly-iii-cron
+    depends_on:
+      app:
+        condition: service_healthy
+    environment:
+      - TZ=${TZ:-Etc/UTC}
+      - STATIC_CRON_TOKEN=${STATIC_CRON_TOKEN}
+    command:
+      - sh
+      - -c
+      - apk add --no-cache tzdata && ln -snf /usr/share/zoneinfo/$$TZ /etc/localtime && echo "0 3 * * * wget -qO- http://app:8080/api/v1/cron/$$STATIC_CRON_TOKEN; echo" | crontab - && crond -f -L /dev/stdout
+    networks:
+      - firefly-network
+    healthcheck:
+      test: ["CMD", "pgrep", "crond"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 30s
+    # SERVER: Uncomment and tune resource limits before deploying to production
+    # deploy:
+    #   resources:
+    #     limits:
+    #       cpus: '0.1'
+    #       memory: 64M
+    #     reservations:
+    #       cpus: '0.05'
+    #       memory: 32M
+
+volumes:
+  upload_data:
+    driver: local
+    # SERVER: Use a bind mount for easier backup control:
+    # driver_opts:
+    #   type: none
+    #   o: bind
+    #   device: /data/firefly-iii/uploads
+  db_data:
+    driver: local
+    # SERVER: Use a bind mount for easier backup control:
+    # driver_opts:
+    #   type: none
+    #   o: bind
+    #   device: /data/firefly-iii/db
+
+networks:
+  firefly-network:
+    driver: bridge
