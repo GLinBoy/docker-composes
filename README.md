@@ -25,6 +25,7 @@ On this repository, I will share my docker composes. Feel free to use, edit, and
 - [ELK](elk/) ([website](https://www.elastic.co/what-is/elk-stack))
 - [Firefox](firefox/) ([website](https://www.mozilla.org/en-US/firefox/new/))
 - [Flink](flink/) ([website](https://flink.apache.org/))
+- [Firefly III](firefly-iii/) ([website](https://www.firefly-iii.org/))
 - [Forgejo](forgejo/) ([website](https://forgejo.org/))
 - [Gitea](gitea/) ([website](https://about.gitea.com/))
 - [Hermes Agent](hermes-agent/) ([website](https://hermes-agent.nousresearch.com/))
