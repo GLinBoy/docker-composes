@@ -1,0 +1,55 @@
+name: gotify
+
+services:
+  gotify:
+    image: ${GOTIFY_IMAGE:-gotify/server:latest}
+    container_name: gotify
+    environment:
+      TZ: ${GOTIFY_TZ:-UTC}
+      # Initial admin account — only applied when the database is first created.
+      # SERVER: leave unset to fall back to Gotify's default admin/admin and
+      # change it in the WebUI immediately after first login, or set a strong
+      # password here before first start.
+      GOTIFY_DEFAULTUSER_NAME: ${GOTIFY_DEFAULTUSER_NAME:-admin}
+      GOTIFY_DEFAULTUSER_PASS: ${GOTIFY_DEFAULTUSER_PASS:-admin}
+      # Allow anyone to register new user accounts via the public endpoint
+      GOTIFY_REGISTRATION: ${GOTIFY_REGISTRATION:-false}
+      GOTIFY_LOGLEVEL: ${GOTIFY_LOGLEVEL:-info}
+    volumes:
+      - gotify-data:/app/data
+      # SERVER: Prefer a bind mount for easier backup control:
+      # - /data/gotify:/app/data
+    ports:
+      - "${GOTIFY_PORT:-8080}:80"
+    networks:
+      - gotify-network
+    healthcheck:
+      # The image ships curl and exposes /health — HTTP 200 only when the app
+      # AND its database are healthy (500 when the database is unreachable)
+      test: ["CMD-SHELL", "curl -sf http://localhost:80/health || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 30s
+    # SERVER: Uncomment and tune resource limits before deploying to production
+    # deploy:
+    #   resources:
+    #     limits:
+    #       cpus: '1.0'
+    #       memory: 512M
+    #     reservations:
+    #       cpus: '0.25'
+    #       memory: 128M
+
+volumes:
+  gotify-data:
+    driver: local
+    # SERVER: Bind mount alternative:
+    # driver_opts:
+    #   type: none
+    #   o: bind
+    #   device: /data/gotify
+
+networks:
+  gotify-network:
+    driver: bridge
