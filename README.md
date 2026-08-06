@@ -29,6 +29,7 @@ On this repository, I will share my docker composes. Feel free to use, edit, and
 - [Firefly III](firefly-iii/) ([website](https://www.firefly-iii.org/))
 - [Forgejo](forgejo/) ([website](https://forgejo.org/))
 - [Gitea](gitea/) ([website](https://about.gitea.com/))
+- [GitLab CE](gitlab/) ([website](https://about.gitlab.com/))
 - [Hermes Agent](hermes-agent/) ([website](https://hermes-agent.nousresearch.com/))
 - [Gogs](gogs/) ([website](https://gogs.io/))
 - [Gotify](gotify/) ([website](https://gotify.net/))
