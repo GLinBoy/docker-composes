@@ -1,0 +1,52 @@
+name: actual-budget
+
+services:
+  actual:
+    image: actualbudget/actual-server:${ACTUAL_VERSION:-latest}
+    container_name: actual-budget
+    environment:
+      - TZ=${TZ:-UTC}
+      # Maximum allowed size for sync files (MB)
+      - ACTUAL_UPLOAD_FILE_SYNC_SIZE_LIMIT_MB=${ACTUAL_UPLOAD_FILE_SYNC_SIZE_LIMIT_MB:-20}
+      # SERVER: To terminate TLS directly in the container (not needed behind a
+      # reverse proxy), place selfhost.key / selfhost.crt in the data folder and
+      # uncomment:
+      # - ACTUAL_HTTPS_KEY=/data/selfhost.key
+      # - ACTUAL_HTTPS_CERT=/data/selfhost.crt
+    volumes:
+      - actual-data:/data
+      # SERVER: Prefer a bind mount for easier backup control:
+      # - /data/actual-budget:/data
+    ports:
+      - "${ACTUAL_PORT:-5006}:5006"
+    networks:
+      - actual-budget-network
+    healthcheck:
+      # Official health check — exits non-zero until the server can reach its own health endpoint
+      test: ["CMD-SHELL", "node scripts/health-check.js"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 30s
+    # SERVER: Uncomment and tune resource limits before deploying to production
+    # deploy:
+    #   resources:
+    #     limits:
+    #       cpus: '1.0'
+    #       memory: 512M
+    #     reservations:
+    #       cpus: '0.25'
+    #       memory: 256M
+
+volumes:
+  actual-data:
+    driver: local
+    # SERVER: Bind mount alternative:
+    # driver_opts:
+    #   type: none
+    #   o: bind
+    #   device: /data/actual-budget
+
+networks:
+  actual-budget-network:
+    driver: bridge
