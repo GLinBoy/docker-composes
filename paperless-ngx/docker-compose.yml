@@ -20,7 +20,7 @@ services:
       POSTGRES_PASSWORD: paperless
 
   webserver:
-    image: paperlessngx/paperless-ngx:3.0.3
+    image: paperlessngx/paperless-ngx:3.0.5
     container_name: paperless-ngx
     restart: unless-stopped
     depends_on:
