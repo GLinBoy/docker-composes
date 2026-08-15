@@ -1,28 +1,58 @@
 name: artemis
+
 services:
   artemis:
+    image: ${ARTEMIS_IMAGE:-apache/artemis:2.55.0-alpine}
     container_name: artemis
-    image: apache/artemis:2.55.0-alpine
+    # SERVER: Uncomment to ensure Artemis starts automatically on boot or failure
+    # restart: unless-stopped
     environment:
-      ARTEMIS_USERNAME: admin
-      ARTEMIS_PASSWORD: admin
+      TZ: ${ARTEMIS_TZ:-UTC}
+      # SERVER: replace the weak default with a strong password
+      # (openssl rand -hex 32) before exposing beyond localhost.
+      ARTEMIS_USER: ${ARTEMIS_USER:-artemis}
+      ARTEMIS_PASSWORD: ${ARTEMIS_PASSWORD:-artemis}
+      # Allow anonymous clients to connect without credentials
+      ANONYMOUS_LOGIN: ${ARTEMIS_ANONYMOUS_LOGIN:-false}
+    volumes:
+      - artemis-instance:/var/lib/artemis-instance
+      # SERVER: Prefer a bind mount for easier backup control:
+      # - /data/artemis:/var/lib/artemis-instance
     ports:
-      - "61616:61616" # Core Protocol (TCP)
-      - "61613:61613" # STOMP
-      - "1883:1883" # MQTT
-      - "5672:5672" # AMQP
-      - "8161:8161" # Web Console (HTTP)
-      - "1099:1099" # JMX RMI Registry Port
+      - "${ARTEMIS_PORT_CORE:-61616}:61616" # Core Protocol (TCP)
+      - "${ARTEMIS_PORT_STOMP:-61613}:61613" # STOMP
+      - "${ARTEMIS_PORT_MQTT:-1883}:1883" # MQTT
+      - "${ARTEMIS_PORT_AMQP:-5672}:5672" # AMQP
+      - "${ARTEMIS_PORT_HTTP:-8161}:8161" # Web Console (HTTP)
+      - "${ARTEMIS_PORT_JMX:-1099}:1099" # JMX RMI Registry Port
+    networks:
+      - artemis-network
     healthcheck:
-      test:
-        [
-          "CMD",
-          "wget",
-          "--no-verbose",
-          "--tries=1",
-          "--spider",
-          "http://localhost:8161",
-        ]
-      interval: 1m
-      timeout: 1s
-      retries: 3
+      # The Web Console is reachable over HTTP once the broker is up
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:8161"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 30s
+    # SERVER: Uncomment and tune resource limits before deploying to production
+    # deploy:
+    #   resources:
+    #     limits:
+    #       cpus: '1.0'
+    #       memory: 1G
+    #     reservations:
+    #       cpus: '0.25'
+    #       memory: 256M
+
+volumes:
+  artemis-instance:
+    driver: local
+    # SERVER: Bind mount alternative:
+    # driver_opts:
+    #   type: none
+    #   o: bind
+    #   device: /data/artemis
+
+networks:
+  artemis-network:
+    driver: bridge
