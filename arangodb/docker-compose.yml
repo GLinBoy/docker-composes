@@ -1,17 +1,60 @@
 name: arangodb
+
 services:
-  arangodb_db_container:
+  arangodb:
+    image: ${ARANGO_IMAGE:-arangodb:3.12.10}
     container_name: arangodb
-    image: arangodb:3.12.10
+    # SERVER: Uncomment to ensure ArangoDB starts automatically on boot or failure
+    # restart: unless-stopped
     environment:
-      ARANGO_ROOT_PASSWORD: 1
-    ports:
-      - 8529:8529
+      TZ: ${ARANGO_TZ:-UTC}
+      # SERVER: replace the weak default with a strong password
+      # (openssl rand -hex 32) before exposing beyond localhost.
+      ARANGO_ROOT_PASSWORD: ${ARANGO_ROOT_PASSWORD:-changeme}
     volumes:
-      - ./data/arangodb_data_container:/var/lib/arangodb3
-      - ./data/arangodb_apps_data_container:/var/lib/arangodb3-apps
+      - arangodb_data:/var/lib/arangodb3
+      - arangodb_apps_data:/var/lib/arangodb3-apps
+      # SERVER: Prefer bind mounts for easier backup control:
+      # - /data/arangodb:/var/lib/arangodb3
+      # - /data/arangodb-apps:/var/lib/arangodb3-apps
+    ports:
+      - "${ARANGO_PORT:-8529}:8529"
+    networks:
+      - arangodb-network
     healthcheck:
-      test: ["CMD", "wget", "--spider", "-q", "127.0.0.1:8529"]
-      interval: 1m
-      timeout: 1s
-      retries: 3
+      # The availability endpoint returns 200 without authentication and is
+      # the documented way to check if ArangoDB is ready.
+      test: ["CMD-SHELL", "wget -q --spider http://localhost:8529/_admin/server/availability || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 30s
+    # SERVER: Uncomment and tune resource limits before deploying to production
+    # deploy:
+    #   resources:
+    #     limits:
+    #       cpus: '1.0'
+    #       memory: 1G
+    #     reservations:
+    #       cpus: '0.25'
+    #       memory: 256M
+
+volumes:
+  arangodb_data:
+    driver: local
+    # SERVER: Bind mount alternative:
+    # driver_opts:
+    #   type: none
+    #   o: bind
+    #   device: /data/arangodb
+  arangodb_apps_data:
+    driver: local
+    # SERVER: Bind mount alternative:
+    # driver_opts:
+    #   type: none
+    #   o: bind
+    #   device: /data/arangodb-apps
+
+networks:
+  arangodb-network:
+    driver: bridge
