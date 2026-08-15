@@ -1,20 +1,57 @@
 name: activemq
+
 services:
   activemq:
+    image: ${ACTIVEMQ_IMAGE:-apache/activemq:latest}
     container_name: activemq
-    image: apache/activemq:6.3.0
     environment:
-      ACTIVEMQ_ADMIN_LOGIN: admin
-      ACTIVEMQ_ADMIN_PASSWORD: admin
+      # Web console (8161) credentials — SERVER: set a strong password in .env
+      # before exposing beyond localhost (generate with: openssl rand -hex 32)
+      ACTIVEMQ_WEB_USER: ${ACTIVEMQ_WEB_USER:-admin}
+      ACTIVEMQ_WEB_PASSWORD: ${ACTIVEMQ_WEB_PASSWORD:-admin}
+      TZ: ${ACTIVEMQ_TZ:-UTC}
+    volumes:
+      - activemq_data:/opt/apache-activemq/data
+      # SERVER: Prefer a bind mount for easier backup control:
+      # - /data/activemq:/opt/apache-activemq/data
     ports:
-      - "61616:61616" # OpenWire (TCP)
-      - "61613:61613" # STOMP
-      - "1883:1883" # MQTT
-      - "5672:5672" # AMQP
-      - "8161:8161" # Web Console (HTTP)
-      - "1099:1099" # JMX RMI Registry Port
+      - "${ACTIVEMQ_PORT_OPENWIRE:-61616}:61616" # OpenWire (TCP)
+      - "${ACTIVEMQ_PORT_STOMP:-61613}:61613" # STOMP
+      - "${ACTIVEMQ_PORT_MQTT:-1883}:1883" # MQTT
+      - "${ACTIVEMQ_PORT_AMQP:-5672}:5672" # AMQP
+      - "${ACTIVEMQ_PORT_WEB:-8161}:8161" # Web Console (HTTP)
+      # SERVER: Remote JMX is disabled by default (createConnector="false") so
+      # this port is inert until JMX security is enabled (see README).
+      - "${ACTIVEMQ_PORT_JMX:-1099}:1099" # JMX RMI Registry Port
+    networks:
+      - activemq-network
     healthcheck:
-      test: activemq status
-      interval: 1m
-      timeout: 1s
-      retries: 3
+      # The image ships without curl/wget/nc — use ActiveMQ's built-in status
+      # command (checks the broker pidfile + process, exits 0 when running)
+      test: ["CMD", "activemq", "status"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 30s
+    # SERVER: Uncomment and tune resource limits before deploying to production
+    # deploy:
+    #   resources:
+    #     limits:
+    #       cpus: '1.0'
+    #       memory: 1G
+    #     reservations:
+    #       cpus: '0.25'
+    #       memory: 512M
+
+volumes:
+  activemq_data:
+    driver: local
+    # SERVER: Bind mount alternative:
+    # driver_opts:
+    #   type: none
+    #   o: bind
+    #   device: /data/activemq
+
+networks:
+  activemq-network:
+    driver: bridge
