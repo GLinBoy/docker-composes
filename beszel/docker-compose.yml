@@ -1,11 +1,51 @@
+name: beszel
+
 services:
   beszel:
-    image: henrygd/beszel:0.18.7
-    container_name: "beszel"
-    restart: unless-stopped
-    ports:
-      - "8090:8090"
+    image: ${BESZEL_IMAGE:-henrygd/beszel:latest}
+    container_name: beszel
+    # SERVER: Uncomment to ensure Beszel starts automatically on boot or failure
+    # restart: unless-stopped
+    environment:
+      TZ: ${BESZEL_TZ:-UTC}
+      APP_URL: ${BESZEL_APP_URL:-http://localhost:8090}
     volumes:
-      - ./beszel_data:/beszel_data
+      - beszel_data:/beszel_data
+      # SERVER: Prefer a bind mount for easier backup control:
+      # - /data/beszel:/beszel_data
+    # LOCAL: Lets the hub reach an agent running on the host during local testing
     extra_hosts:
       - "host.docker.internal:host-gateway"
+    ports:
+      - "${BESZEL_PORT:-8090}:8090"
+    networks:
+      - beszel-network
+    healthcheck:
+      # The image ships a health subcommand that checks the hub's HTTP endpoint
+      test: ["CMD", "/beszel", "health", "--url", "http://localhost:8090"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 30s
+    # SERVER: Uncomment and tune resource limits before deploying to production
+    # deploy:
+    #   resources:
+    #     limits:
+    #       cpus: '1.0'
+    #       memory: 512M
+    #     reservations:
+    #       cpus: '0.25'
+    #       memory: 128M
+
+volumes:
+  beszel_data:
+    driver: local
+    # SERVER: Bind mount alternative:
+    # driver_opts:
+    #   type: none
+    #   o: bind
+    #   device: /data/beszel
+
+networks:
+  beszel-network:
+    driver: bridge
