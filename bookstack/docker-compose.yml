@@ -1,33 +1,90 @@
-services:
-  bookstack:
-    image: linuxserver/bookstack:26.05.3
-    container_name: bookstack
-    environment:
-      - PUID=1000
-      - PGID=1000
-      - TZ=Europe/Berlin
-      - APP_URL=http://localhost:6875
-      - DB_HOST=bookstack_db
-      - DB_PORT=3306
-      - DB_USER=bookstack
-      - DB_PASS=bookstack
-      - DB_DATABASE=bookstackapp
-    volumes:
-      - ./config:/config
-    ports:
-      - 6875:80
-    restart: unless-stopped
-    depends_on:
-      - bookstack_db
+name: bookstack
 
-  bookstack_db:
-    image: mariadb:11
-    container_name: bookstack_db
+services:
+  app:
+    image: lscr.io/linuxserver/bookstack:${BOOKSTACK_VERSION:-latest}
+    container_name: bookstack-app
+    depends_on:
+      db:
+        condition: service_healthy
     environment:
-      - MYSQL_ROOT_PASSWORD=bookstack
-      - MYSQL_DATABASE=bookstackapp
-      - MYSQL_USER=bookstack
-      - MYSQL_PASSWORD=bookstack
+      - TZ=${TZ:-Etc/UTC}
+      - PUID=${PUID:-1000}
+      - PGID=${PGID:-1000}
+      - APP_URL=${APP_URL:-http://localhost:6875}
+      - APP_KEY=${APP_KEY}
+      - DB_HOST=db
+      - DB_PORT=3306
+      - DB_USERNAME=${DB_USERNAME:-bookstack}
+      - DB_PASSWORD=${DB_PASSWORD}
+      - DB_DATABASE=${DB_DATABASE:-bookstackapp}
+      - QUEUE_CONNECTION=${QUEUE_CONNECTION:-} # set to "database" to enable async actions (email, webhooks)
     volumes:
-      - ./db:/var/lib/mysql
-    restart: unless-stopped
+      - config_data:/config
+    ports:
+      - "${BOOKSTACK_PORT:-6875}:80"
+    networks:
+      - bookstack-network
+    healthcheck:
+      test: ["CMD-SHELL", "curl -sf http://localhost/ || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 60s
+    # SERVER: Uncomment and tune resource limits before deploying to production
+    # deploy:
+    #   resources:
+    #     limits:
+    #       cpus: '1.0'
+    #       memory: 1G
+    #     reservations:
+    #       cpus: '0.25'
+    #       memory: 256M
+
+  db:
+    image: ${BOOKSTACK_DATABASE_IMAGE:-mariadb:11.8.8}
+    container_name: bookstack-db
+    environment:
+      - MARIADB_DATABASE=${DB_DATABASE:-bookstackapp}
+      - MARIADB_USER=${DB_USERNAME:-bookstack}
+      - MARIADB_PASSWORD=${DB_PASSWORD}
+      - MARIADB_ROOT_PASSWORD=${DB_ROOT_PASSWORD}
+    volumes:
+      - db_data:/var/lib/mysql
+    networks:
+      - bookstack-network
+    healthcheck:
+      test: ["CMD", "healthcheck.sh", "--su-mysql", "--connect", "--innodb_initialized"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 30s
+    # SERVER: Uncomment and tune resource limits before deploying to production
+    # deploy:
+    #   resources:
+    #     limits:
+    #       cpus: '1.0'
+    #       memory: 1G
+    #     reservations:
+    #       cpus: '0.25'
+    #       memory: 256M
+
+volumes:
+  config_data:
+    driver: local
+    # SERVER: Use a bind mount for easier backup control:
+    # driver_opts:
+    #   type: none
+    #   o: bind
+    #   device: /data/bookstack/config
+  db_data:
+    driver: local
+    # SERVER: Use a bind mount for easier backup control:
+    # driver_opts:
+    #   type: none
+    #   o: bind
+    #   device: /data/bookstack/db
+
+networks:
+  bookstack-network:
+    driver: bridge
