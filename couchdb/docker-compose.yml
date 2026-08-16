@@ -1,70 +1,105 @@
 name: couchdb
-services:
-  couchdb-0:
-    image: couchdb:3.5.2.1
-    container_name: couchdb-0
-    ports:
-      - "${PORT_BASE}0:5984"
-    environment:
-      COUCHDB_USER: ${COUCHDB_USER}
-      COUCHDB_PASSWORD: ${COUCHDB_PASSWORD}
-      COUCHDB_SECRET: ${COUCHDB_SECRET}
-      NODENAME: couchdb-0.${COMPOSE_PROJECT_NAME}
-      ERL_FLAGS: "-setcookie ${COUCHDB_COOKIE}"
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:5984/_up"]
-      interval: 1m
-      timeout: 1s
-      retries: 3
-    volumes:
-      - "data-couch-0:/opt/couchdb/data"
-      - "cfg-couch-0:/opt/couchdb/etc/local.d"
-  couchdb-1:
-    image: couchdb:3.5.2.1
-    container_name: couchdb-1
-    ports:
-      - "${PORT_BASE}1:5984"
-    environment:
-      COUCHDB_USER: ${COUCHDB_USER}
-      COUCHDB_PASSWORD: ${COUCHDB_PASSWORD}
-      COUCHDB_SECRET: ${COUCHDB_SECRET}
-      NODENAME: couchdb-1.${COMPOSE_PROJECT_NAME}
-      ERL_FLAGS: "-setcookie ${COUCHDB_COOKIE}"
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:5984/_up"]
-      interval: 1m
-      timeout: 1s
-      retries: 3
-    volumes:
-      - "data-couch-1:/opt/couchdb/data"
-      - "cfg-couch-1:/opt/couchdb/etc/local.d"
-  couchdb-2:
-    image: couchdb:3.5.2.1
-    container_name: couchdb-2
-    ports:
-      - "${PORT_BASE}2:5984"
-    environment:
-      COUCHDB_USER: ${COUCHDB_USER}
-      COUCHDB_PASSWORD: ${COUCHDB_PASSWORD}
-      COUCHDB_SECRET: ${COUCHDB_SECRET}
-      NODENAME: couchdb-2.${COMPOSE_PROJECT_NAME}
-      ERL_FLAGS: "-setcookie ${COUCHDB_COOKIE}"
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:5984/_up"]
-      interval: 1m
-      timeout: 1s
-      retries: 3
-    volumes:
-      - "data-couch-2:/opt/couchdb/data"
-      - "cfg-couch-2:/opt/couchdb/etc/local.d"
 
-networks:
-  network:
+services:
+  # Master / seed node — exposes the HTTP API and the DB Console
+  couchdb-0:
+    image: ${COUCHDB_IMAGE:-couchdb:3.5.2.1}
+    container_name: couchdb-0
+    environment:
+      - COUCHDB_USER=${COUCHDB_USER}
+      - COUCHDB_PASSWORD=${COUCHDB_PASSWORD}
+      - COUCHDB_SECRET=${COUCHDB_SECRET}
+      - NODENAME=couchdb-0
+      - COUCHDB_ERLANG_COOKIE=${COUCHDB_COOKIE}
+    volumes:
+      - couchdb_0_data:/opt/couchdb/data
+      - couchdb_0_cfg:/opt/couchdb/etc/local.d
+    ports:
+      - "${COUCHDB_PORT_0:-5984}:5984"
+    networks:
+      - couchdb-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5984/_up"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 30s
+    # SERVER: Uncomment and tune resource limits before deploying to production
+    # deploy:
+    #   resources:
+    #     limits:
+    #       cpus: '1.0'
+    #       memory: 1G
+    #     reservations:
+    #       cpus: '0.25'
+    #       memory: 256M
+
+  # Slave node — joins the cluster via the seed node(s)
+  couchdb-1:
+    image: ${COUCHDB_IMAGE:-couchdb:3.5.2.1}
+    container_name: couchdb-1
+    depends_on:
+      couchdb-0:
+        condition: service_healthy
+    environment:
+      - COUCHDB_USER=${COUCHDB_USER}
+      - COUCHDB_PASSWORD=${COUCHDB_PASSWORD}
+      - COUCHDB_SECRET=${COUCHDB_SECRET}
+      - NODENAME=couchdb-1
+      - COUCHDB_ERLANG_COOKIE=${COUCHDB_COOKIE}
+    volumes:
+      - couchdb_1_data:/opt/couchdb/data
+      - couchdb_1_cfg:/opt/couchdb/etc/local.d
+    ports:
+      - "${COUCHDB_PORT_1:-5985}:5984"
+    networks:
+      - couchdb-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5984/_up"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 30s
+    # SERVER: Uncomment and tune resource limits before deploying to production
+    # deploy:
+    #   resources:
+    #     limits:
+    #       cpus: '1.0'
+    #       memory: 1G
+    #     reservations:
+    #       cpus: '0.25'
+    #       memory: 256M
 
 volumes:
-  data-couch-0:
-  cfg-couch-0:
-  data-couch-1:
-  cfg-couch-1:
-  data-couch-2:
-  cfg-couch-2:
+  couchdb_0_data:
+    driver: local
+    # SERVER: Use a bind mount for easier backup control:
+    # driver_opts:
+    #   type: none
+    #   o: bind
+    #   device: /data/couchdb/node0/data
+  couchdb_0_cfg:
+    driver: local
+    # SERVER: Use a bind mount for easier backup control:
+    # driver_opts:
+    #   type: none
+    #   o: bind
+    #   device: /data/couchdb/node0/cfg
+  couchdb_1_data:
+    driver: local
+    # SERVER: Use a bind mount for easier backup control:
+    # driver_opts:
+    #   type: none
+    #   o: bind
+    #   device: /data/couchdb/node1/data
+  couchdb_1_cfg:
+    driver: local
+    # SERVER: Use a bind mount for easier backup control:
+    # driver_opts:
+    #   type: none
+    #   o: bind
+    #   device: /data/couchdb/node1/cfg
+
+networks:
+  couchdb-network:
+    driver: bridge
