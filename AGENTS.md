@@ -50,6 +50,19 @@ compose file**.
   `docker compose up -d` — no compose file changes required.
 - Prefer Alpine or slim variants when available.
 
+### Cluster Services
+
+Services that are designed to run as a cluster (e.g. Cassandra, ScyllaDB, CockroachDB) need
+special handling — a single node is not a cluster, but running many by default wastes resources:
+
+- **Default to exactly 2 instances** — one "master" (seed/first node) and one "slave"
+  (second node). This keeps the compose file small and the local resource usage low.
+- Name the instances explicitly, e.g. `cassandra-0` (master) and `cassandra-1` (slave).
+- Every instance needs its own named data volume and container name.
+- The **README.md must include a "Scaling Up" section** that explains, step by step, how to
+  add more master or slave instances — including the new service block, the new volume, and
+  any seed/join-list updates required in `.env` / the compose file.
+
 ### File Naming
 
 - Compose folders: lowercase, hyphenated (e.g., `my-service/`)
