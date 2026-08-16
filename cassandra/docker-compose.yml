@@ -1,33 +1,84 @@
 name: cassandra
+
 services:
+  # Master / seed node — first node of the cluster, exposes the CQL port
   cassandra-0:
+    image: ${CASSANDRA_IMAGE:-cassandra:5.0.8}
     container_name: cassandra-0
-    image: cassandra:5.0.8
+    environment:
+      - CASSANDRA_CLUSTER_NAME=${CASSANDRA_CLUSTER_NAME:-Cassandra Cluster}
+      - CASSANDRA_SEEDS=${CASSANDRA_SEEDS:-cassandra-0,cassandra-1}
+      - CASSANDRA_DC=${CASSANDRA_DC:-datacenter1}
+      - CASSANDRA_RACK=${CASSANDRA_RACK:-rack1}
+    volumes:
+      - cassandra_0_data:/var/lib/cassandra
     ports:
-      - "9042:9042"
-    environment:
-      - CASSANDRA_SEEDS=cassandra-0,cassandra-1
-    healthcheck:
-      test: [ "CMD-SHELL", "[ $$(nodetool statusgossip) = running ]" ]
-      start_period: 60s
-      interval: 1m
-      timeout: 1s
-      retries: 3
+      - "${CASSANDRA_PORT:-9042}:9042"
     networks:
       - cassandra-network
+    healthcheck:
+      test: ["CMD-SHELL", "[ $$(nodetool statusgossip) = running ]"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 90s
+    # SERVER: Uncomment and tune resource limits before deploying to production
+    # deploy:
+    #   resources:
+    #     limits:
+    #       cpus: '2.0'
+    #       memory: 4G
+    #     reservations:
+    #       cpus: '0.5'
+    #       memory: 1G
+
+  # Slave node — joins the cluster via the seed node(s)
   cassandra-1:
+    image: ${CASSANDRA_IMAGE:-cassandra:5.0.8}
     container_name: cassandra-1
-    image: cassandra:5.0.8
+    depends_on:
+      cassandra-0:
+        condition: service_healthy
     environment:
-      - CASSANDRA_SEEDS=cassandra-0,cassandra-1
-    healthcheck:
-      test: [ "CMD-SHELL", "[ $$(nodetool statusgossip) = running ]" ]
-      start_period: 60s
-      interval: 1m
-      timeout: 1s
-      retries: 3
+      - CASSANDRA_CLUSTER_NAME=${CASSANDRA_CLUSTER_NAME:-Cassandra Cluster}
+      - CASSANDRA_SEEDS=${CASSANDRA_SEEDS:-cassandra-0,cassandra-1}
+      - CASSANDRA_DC=${CASSANDRA_DC:-datacenter1}
+      - CASSANDRA_RACK=${CASSANDRA_RACK:-rack1}
+    volumes:
+      - cassandra_1_data:/var/lib/cassandra
     networks:
       - cassandra-network
+    healthcheck:
+      test: ["CMD-SHELL", "[ $$(nodetool statusgossip) = running ]"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 90s
+    # SERVER: Uncomment and tune resource limits before deploying to production
+    # deploy:
+    #   resources:
+    #     limits:
+    #       cpus: '2.0'
+    #       memory: 4G
+    #     reservations:
+    #       cpus: '0.5'
+    #       memory: 1G
+
+volumes:
+  cassandra_0_data:
+    driver: local
+    # SERVER: Use a bind mount for easier backup control:
+    # driver_opts:
+    #   type: none
+    #   o: bind
+    #   device: /data/cassandra/node0
+  cassandra_1_data:
+    driver: local
+    # SERVER: Use a bind mount for easier backup control:
+    # driver_opts:
+    #   type: none
+    #   o: bind
+    #   device: /data/cassandra/node1
 
 networks:
   cassandra-network:
