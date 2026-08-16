@@ -1,52 +1,126 @@
-version: "3"
 name: cockroachdb
+
 services:
+  # Master / seed node — the first node of the cluster, exposes SQL and the DB Console
   roach1:
+    image: ${COCKROACHDB_IMAGE:-cockroachdb/cockroach:v26.2.5}
     container_name: roach1
-    image: cockroachdb/cockroach:v26.2.5
     hostname: roach1
     command:
-      start --insecure --advertise-addr=roach1:26357 --http-addr=roach1:8080
-      --listen-addr=roach1:26357 --sql-addr=roach1:26257
-      --join=roach1:26357,roach2:26357
+      - start
+      - --insecure
+      - --advertise-addr=roach1:26357
+      - --http-addr=roach1:8080
+      - --listen-addr=roach1:26357
+      - --sql-addr=roach1:26257
+      - --join=${COCKROACHDB_JOIN:-roach1:26357,roach2:26357}
     volumes:
-      - roach1:/cockroach/cockroach-data
+      - roach1_data:/cockroach/cockroach-data
     ports:
-      - "26257:26257"
-      - "8080:8080"
+      - "${COCKROACHDB_SQL_PORT:-26257}:26257"
+      - "${COCKROACHDB_HTTP_PORT:-8080}:8080"
     networks:
-      - roachnet
+      - cockroachdb-network
+    healthcheck:
+      test: ["CMD-SHELL", "cockroach node status --insecure --host=localhost:26357 && exit 0 || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 120s
+    # SERVER: Uncomment and tune resource limits before deploying to production
+    # deploy:
+    #   resources:
+    #     limits:
+    #       cpus: '2.0'
+    #       memory: 4G
+    #     reservations:
+    #       cpus: '0.5'
+    #       memory: 1G
 
+  # Slave node — joins the cluster via the seed node(s)
   roach2:
+    image: ${COCKROACHDB_IMAGE:-cockroachdb/cockroach:v26.2.5}
     container_name: roach2
-    image: cockroachdb/cockroach:v26.2.5
     hostname: roach2
     command:
-      start --insecure --advertise-addr=roach2:26357 --http-addr=roach2:8081
-      --listen-addr=roach2:26357 --sql-addr=roach2:26258
-      --join=roach1:26357,roach2:26357
+      - start
+      - --insecure
+      - --advertise-addr=roach2:26357
+      - --http-addr=roach2:8081
+      - --listen-addr=roach2:26357
+      - --sql-addr=roach2:26258
+      - --join=${COCKROACHDB_JOIN:-roach1:26357,roach2:26357}
     volumes:
-      - roach2:/cockroach/cockroach-data
+      - roach2_data:/cockroach/cockroach-data
     ports:
-      - "26258:26258"
-      - "8081:8081"
+      - "${COCKROACHDB_SQL_PORT_2:-26258}:26258"
+      - "${COCKROACHDB_HTTP_PORT_2:-8081}:8081"
     networks:
-      - roachnet
+      - cockroachdb-network
+    healthcheck:
+      test: ["CMD-SHELL", "cockroach node status --insecure --host=localhost:26357 && exit 0 || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 120s
+    # SERVER: Uncomment and tune resource limits before deploying to production
+    # deploy:
+    #   resources:
+    #     limits:
+    #       cpus: '2.0'
+    #       memory: 4G
+    #     reservations:
+    #       cpus: '0.5'
+    #       memory: 1G
 
+  # One-time cluster initialization — retries until the cluster is ready, then stays up
+  # so `docker compose ps` can report it as healthy.
   init:
-    image: cockroachdb/cockroach:v26.2.5
-    networks:
-      - roachnet
+    image: ${COCKROACHDB_IMAGE:-cockroachdb/cockroach:v26.2.5}
+    container_name: cockroachdb-init
     depends_on:
-      - roach1
-      - roach2
-    command: init --insecure --host=roach1:26357
-    restart: on-failure
-
-networks:
-  roachnet:
-    driver: bridge
+      roach1:
+        condition: service_started
+      roach2:
+        condition: service_started
+    command:
+      - sh
+      - -c
+      - until cockroach init --insecure --host=roach1:26357 2>/dev/null; do echo "cluster not ready, retrying..."; sleep 2; done; echo "cluster initialized"; tail -f /dev/null
+    networks:
+      - cockroachdb-network
+    healthcheck:
+      test: ["CMD-SHELL", "cockroach node status --insecure --host=roach1:26357 >/dev/null 2>&1 && exit 0 || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 60s
+    # SERVER: Uncomment and tune resource limits before deploying to production
+    # deploy:
+    #   resources:
+    #     limits:
+    #       cpus: '0.25'
+    #       memory: 128M
+    #     reservations:
+    #       cpus: '0.1'
+    #       memory: 64M
 
 volumes:
-  roach1:
-  roach2:
+  roach1_data:
+    driver: local
+    # SERVER: Use a bind mount for easier backup control:
+    # driver_opts:
+    #   type: none
+    #   o: bind
+    #   device: /data/cockroachdb/node1
+  roach2_data:
+    driver: local
+    # SERVER: Use a bind mount for easier backup control:
+    # driver_opts:
+    #   type: none
+    #   o: bind
+    #   device: /data/cockroachdb/node2
+
+networks:
+  cockroachdb-network:
+    driver: bridge
