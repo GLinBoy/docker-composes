@@ -1,27 +1,48 @@
 # Caddy
 
-[Caddy](https://caddyserver.com/) is a powerful, enterprise-ready, open source web server with automatic HTTPS written in Go.
+[Caddy](https://caddyserver.com/) is a powerful, enterprise-ready, open source web server with
+automatic HTTPS written in Go. It gets secure HTTPS for any domain by default and requires no
+configuration to get certificates issued and renewed.
+
+This stack runs the Caddy web server and reverse proxy, mounting your `Caddyfile` from
+`./caddy-config` and persisting certificates and runtime state in named volumes.
 
 ## Quick Start
 
-### 1. Create a Caddyfile
-
-Before starting Caddy, create a `Caddyfile` in this directory to define your site configuration:
+### 1. Configure Environment
 
 ```bash
+cp .env.example .env
+```
+
+Edit `.env` and set at minimum (only if you need automatic HTTPS in production):
+
+- `CADDY_EMAIL` - your email for Let's Encrypt notifications
+- `ACME_AGREE=true` - agree to the ACME Terms of Service
+
+Optionally change:
+
+- `CADDY_VERSION` - the exact Caddy version to run (defaults to `latest` when unset)
+- `CADDY_HTTP_PORT` / `CADDY_HTTPS_PORT` - the host ports for HTTP/HTTPS (defaults: `80` / `443`)
+
+### 2. Create a Caddyfile
+
+Create `caddy-config/Caddyfile` to define your site configuration:
+
+```caddyfile
 # Example Caddyfile for local development
-localhost:80 {
+:80 {
     respond "Hello from Caddy!"
 }
 ```
 
-### 2. Start Caddy
+### 3. Start Caddy
 
 ```bash
 docker compose up -d
 ```
 
-### 3. Verify Caddy is Running
+### 4. Verify Caddy is Running
 
 ```bash
 docker compose ps
@@ -29,7 +50,7 @@ docker compose ps
 
 All services should show as "healthy".
 
-### 4. Test Your Configuration
+### 5. Test Your Configuration
 
 ```bash
 # Test HTTP response
@@ -39,27 +60,53 @@ curl http://localhost
 curl http://localhost:2019/metrics
 ```
 
-### 5. Stop Caddy
+### 6. View Logs
+
+```bash
+docker compose logs -f caddy
+```
+
+### 7. Stop Caddy
 
 ```bash
 docker compose down
 ```
 
+> Containers stop when the host restarts (no restart policy is set, per repository
+> convention). To have Caddy start automatically, add `restart: unless-stopped` to the
+> service.
+
 ## Configuration
+
+### Environment Variables
+
+| Variable            | Required | Description                                                            |
+| ------------------- | -------- | ---------------------------------------------------------------------- |
+| `CADDY_VERSION`     | ❌       | Exact Caddy version (defaults to `latest` when unset)                  |
+| `CADDY_HTTP_PORT`   | ❌       | Host port for HTTP traffic (default: `80`)                             |
+| `CADDY_HTTPS_PORT`  | ❌       | Host port for HTTPS traffic (default: `443`)                           |
+| `CADDY_ADMIN`       | ❌       | Admin API address (default: `localhost:2019`)                          |
+| `CADDY_GRACE_PERIOD`| ❌       | Grace period for graceful shutdown (default: `10s`)                    |
+| `ACME_AGREE`        | ❌       | Set to `true` to agree to the ACME Terms of Service (default: `false`) |
+| `ACME_CA`           | ❌       | Custom ACME CA URL (empty = Let's Encrypt)                             |
+| `CADDY_EMAIL`       | ❌       | Email for Let's Encrypt notifications                                  |
 
 ### Caddyfile
 
-The Caddyfile is the configuration file for Caddy. Mount your Caddyfile to `/etc/caddy/Caddyfile` inside the container.
+The `Caddyfile` in `./caddy-config` is mounted read-only to `/etc/caddy/Caddyfile` inside the
+container. After editing it, reload without downtime:
 
-Example Caddyfile for reverse proxy:
-
-```caddyfile
-localhost:80 {
-    reverse_proxy backend-service:8080
-}
+```bash
+docker compose exec caddy caddy reload --config /etc/caddy/Caddyfile
 ```
 
-Example Caddyfile with automatic HTTPS (production):
+Validate the syntax first:
+
+```bash
+docker compose exec caddy caddy validate --config /etc/caddy/Caddyfile
+```
+
+Example Caddyfile for a reverse proxy with automatic HTTPS (production):
 
 ```caddyfile
 example.com {
@@ -69,104 +116,70 @@ example.com {
 
 ### Volumes
 
-| Volume | Purpose |
-|--------|---------|
-| `./Caddyfile:/etc/caddy/Caddyfile:ro` | Caddy configuration file (read-only) |
-| `caddy_data:/data` | SSL certificates and site data |
-| `caddy_config:/config` | Caddy runtime configuration |
+| Volume         | Purpose                                        |
+| -------------- | ---------------------------------------------- |
+| `./caddy-config` | Your Caddyfile (bind mount, read-only)       |
+| `caddy_data`   | SSL certificates and site data                 |
+| `caddy_config` | Caddy runtime configuration                    |
 
 ### Ports
 
-| Port | Purpose |
-|------|---------|
-| 80 | HTTP traffic |
-| 443 | HTTPS traffic (automatic with Caddy) |
-| 2019 | Caddy admin API (internal) |
+| Port | Purpose                                          |
+| ---- | ------------------------------------------------ |
+| 80   | HTTP traffic                                     |
+| 443  | HTTPS traffic (automatic with Caddy)             |
+| 2019 | Caddy admin API (internal, used by the healthcheck) |
 
-## Production Considerations
+## Updating
 
-### Before Deploying to Production:
+1. Bump `CADDY_VERSION` in `.env` to the next release (e.g. `2.12.0-alpine`).
+2. Pull and recreate the container:
 
-1. **Set Your Email Address**
-   
-   Set the `CADDY_EMAIL` environment variable in `.env` to receive important notifications from Let's Encrypt:
-   
-   ```bash
-   CADDY_EMAIL=your-email@example.com
-   ```
+```bash
+docker compose pull
+docker compose up -d
+```
 
-2. **Agree to ACME Terms of Service**
-   
-   Set `ACME_AGREE=true` in your `.env` file to automatically agree to the ACME TOS.
+## Server Checklist
 
-3. **Configure Firewall Rules**
-   
-   Ensure ports 80 and 443 are open on your server firewall.
+Before deploying to a production server:
 
-4. **Resource Limits**
-   
-   Uncomment the `deploy.resources` block in `docker-compose.yml` and adjust CPU/memory limits based on your expected traffic.
+- [ ] Set `CADDY_EMAIL` to your real email and `ACME_AGREE=true` in `.env`
+- [ ] Ensure firewall rules allow ports 80 and 443 (Let's Encrypt needs inbound 80 to validate)
+- [ ] Point your domain's DNS records at the server before enabling HTTPS
+- [ ] Add `restart: unless-stopped` if you want auto-start after reboots
+- [ ] Uncomment and tune the `deploy.resources` block on the service
+- [ ] Consider bind mounts for `caddy_data` / `caddy_config` for easier backup control
+- [ ] Verify the certificate after startup: `curl -vI https://your-domain.com`
 
-5. **Bind Mounts for Data**
-   
-   Consider using bind mounts instead of named volumes for easier backup and management:
-   
-   ```yaml
-   volumes:
-     - /data/caddy/data:/data
-     - /data/caddy/config:/config
-   ```
+## Useful Commands
 
-6. **DNS Configuration**
-   
-   Ensure your domain's DNS records point to your server's IP address before enabling HTTPS.
-
-7. **Test SSL Certificate Issuance**
-   
-   After starting Caddy with your production domain, verify the certificate:
-   
-   ```bash
-   curl -vI https://your-domain.com
-   ```
+```bash
+# View Caddy version
+docker compose exec caddy caddy version
+```
 
 ## Troubleshooting
 
 ### Caddy won't start
 
 Check the logs:
+
 ```bash
 docker compose logs caddy
 ```
 
 ### SSL certificates not issuing
 
-- Ensure port 80 is accessible from the internet (Let's Encrypt needs to validate)
-- Check DNS records are correctly configured
+- Ensure port 80 is reachable from the internet (Let's Encrypt validates through it)
+- Check that DNS records point to your server
 - Verify `ACME_AGREE=true` is set
+- Test with a staging endpoint via `ACME_CA` before switching to the production CA
 
 ### Admin API not accessible
 
-The admin API listens on `localhost:2019` inside the container. To access it from outside, you can add port mapping:
-```yaml
-ports:
-  - "2019:2019"
-```
-
-## Useful Commands
-
-```bash
-# View logs
-docker compose logs -f caddy
-
-# Reload Caddy configuration (without downtime)
-docker compose exec caddy caddy reload --config /etc/caddy/Caddyfile
-
-# View Caddy version
-docker compose exec caddy caddy version
-
-# Test Caddyfile syntax
-docker compose exec caddy caddy validate --config /etc/caddy/Caddyfile
-```
+The admin API listens on `localhost:2019` inside the container. To access it from outside, map
+the port in the `ports` section of `docker-compose.yml`.
 
 ## Resources
 
