@@ -1,31 +1,24 @@
-# ============================================================
-# ELK Stack — Production-Ready Docker Compose
-# ------------------------------------------------------------
-# Local usage : docker compose up -d
-# Server notes: Search for all "# SERVER:" comments below
-#               and apply the required changes before deploying.
-# ============================================================
+name: elk
 
 services:
-  # ----------------------------------------------------------
-  # ELASTICSEARCH
-  # SERVER: For a cluster, change discovery.type and add
-  #         cluster.initial_master_nodes / discovery.seed_hosts
-  # ----------------------------------------------------------
+  # Elasticsearch — the search and analytics engine at the core of the stack
   elasticsearch:
-    image: docker.elastic.co/elasticsearch/elasticsearch:9.4.1
-    container_name: elasticsearch
-    restart: unless-stopped
+    image: docker.elastic.co/elasticsearch/elasticsearch:${ELK_VERSION:-latest}
+    container_name: elk-elasticsearch
+    # SERVER: Uncomment to ensure the stack starts automatically on boot or failure
+    # restart: unless-stopped
     environment:
+      - TZ=${ELK_TZ:-UTC}
       - discovery.type=single-node
       - cluster.name=elk-cluster
       - node.name=es-node-01
+      # Prevents swapping — requires the memlock ulimit below
       - bootstrap.memory_lock=true
-      # SERVER: Set to half of your server's available RAM (e.g. 4g for 8GB RAM)
-      - ES_JAVA_OPTS=-Xms512m -Xmx512m
-      # SERVER: Change to true and set up TLS + run:
-      #           docker exec -it elasticsearch bin/elasticsearch-service-tokens create elastic/kibana kibana-token
-      #         Then use ELASTICSEARCH_SERVICEACCOUNTTOKEN in Kibana instead of credentials.
+      # SERVER: Set to half of your server's available RAM (e.g. -Xms4g -Xmx4g for 8 GB RAM)
+      - ES_JAVA_OPTS=${ES_JAVA_OPTS:--Xms512m -Xmx512m}
+      # SERVER: Enable security and TLS before exposing the stack publicly. Set to true, then
+      #         create a Kibana service account token and set ELASTICSEARCH_SERVICEACCOUNTTOKEN
+      #         on Kibana (see README "Server Checklist" for the exact steps).
       - xpack.security.enabled=false
       - xpack.security.http.ssl.enabled=false
     ulimits:
@@ -37,91 +30,91 @@ services:
         hard: 65536
     volumes:
       - es_data:/usr/share/elasticsearch/data
+    ports:
+      - "127.0.0.1:${ELASTICSEARCH_PORT:-9200}:9200"
     networks:
-      - logging-network
+      - elk-network
     healthcheck:
-      test:
-        [
-          "CMD-SHELL",
-          "curl -sf http://localhost:9200/_cluster/health || exit 1",
-        ]
+      test: ["CMD-SHELL", "curl -sf http://localhost:9200/_cluster/health || exit 1"]
       interval: 30s
       timeout: 10s
       retries: 5
       start_period: 60s
-    # SERVER: Uncomment and bind to loopback only — never expose 9200 to the internet.
-    #         Use a reverse proxy (Nginx/Traefik) with TLS termination in front of Kibana.
-    # ports:
-    #   - "127.0.0.1:9200:9200"
+    # SERVER: Uncomment and tune resource limits before deploying to production
+    # deploy:
+    #   resources:
+    #     limits:
+    #       cpus: '2.0'
+    #       memory: 4G
+    #     reservations:
+    #       cpus: '0.5'
+    #       memory: 1G
 
-  # ----------------------------------------------------------
-  # LOGSTASH
-  # SERVER: Tune pipeline.workers to match your CPU core count.
-  #         Consider Filebeat → Logstash instead of raw GELF
-  #         to reduce UDP packet loss under high load.
-  # ----------------------------------------------------------
+  # Logstash — ingests GELF, Beats and TCP/JSON logs, processes them and ships them to Elasticsearch
   logstash:
-    image: docker.elastic.co/logstash/logstash:9.4.1
-    container_name: logstash
-    restart: unless-stopped
+    image: docker.elastic.co/logstash/logstash:${ELK_VERSION:-latest}
+    container_name: elk-logstash
+    # SERVER: Uncomment to ensure the stack starts automatically on boot or failure
+    # restart: unless-stopped
     depends_on:
       elasticsearch:
         condition: service_healthy
     environment:
-      # SERVER: Increase Xmx based on your expected log throughput.
-      - LS_JAVA_OPTS=-Xms256m -Xmx256m
+      - TZ=${ELK_TZ:-UTC}
+      # SERVER: Increase Xmx based on your expected log throughput
+      - LS_JAVA_OPTS=${LS_JAVA_OPTS:--Xms256m -Xmx256m}
     volumes:
       - ./logstash.conf:/usr/share/logstash/pipeline/logstash.conf:ro
       # SERVER: Uncomment to provide a custom logstash.yml for pipeline tuning:
       # - ./logstash.yml:/usr/share/logstash/config/logstash.yml:ro
     ports:
-      # GELF UDP — used by Docker logging driver
-      # SERVER: Bind to a specific interface: "127.0.0.1:12201:12201/udp"
-      - "12201:12201/udp"
+      # GELF UDP — Docker logging driver
+      # SERVER: Bind to a specific interface, e.g. "127.0.0.1:${LOGSTASH_GELF_PORT:-12201}:12201/udp"
+      - "${LOGSTASH_GELF_PORT:-12201}:12201/udp"
       # Beats input (Filebeat, Metricbeat, etc.)
-      - "5044:5044"
+      - "${LOGSTASH_BEATS_PORT:-5044}:5044"
+      # TCP input — Spring Boot / logstash-logback encoder
+      - "${LOGSTASH_TCP_PORT:-5000}:5000"
     networks:
-      - logging-network
+      - elk-network
     healthcheck:
       test: ["CMD-SHELL", "curl -sf http://localhost:9600 || exit 1"]
       interval: 30s
       timeout: 10s
       retries: 5
       start_period: 90s
+    # SERVER: Uncomment and tune resource limits before deploying to production
+    # deploy:
+    #   resources:
+    #     limits:
+    #       cpus: '1.0'
+    #       memory: 1G
+    #     reservations:
+    #       cpus: '0.25'
+    #       memory: 256M
 
-  # ----------------------------------------------------------
-  # KIBANA
-  # No credentials needed — security is disabled on ES (local dev).
-  # SERVER: Enable security on ES, generate a service account token:
-  #           docker exec -it elasticsearch \
-  #             bin/elasticsearch-service-tokens create elastic/kibana kibana-token
-  #         Then replace the environment block with:
-  #           - ELASTICSEARCH_SERVICEACCOUNTTOKEN=<token>
-  #           - SERVER_PUBLICBASEURL=https://kibana.example.com
-  #         And place Kibana behind Nginx/Traefik with HTTPS.
-  #         Remove the ports block and proxy port 5601 internally.
-  # ----------------------------------------------------------
+  # Kibana — web UI for exploring and visualizing the logs stored in Elasticsearch
   kibana:
-    image: docker.elastic.co/kibana/kibana:9.4.1
-    container_name: kibana
-    restart: unless-stopped
+    image: docker.elastic.co/kibana/kibana:${ELK_VERSION:-latest}
+    container_name: elk-kibana
+    # SERVER: Uncomment to ensure the stack starts automatically on boot or failure
+    # restart: unless-stopped
     depends_on:
       elasticsearch:
         condition: service_healthy
-      logstash:
-        condition: service_healthy
     environment:
+      - TZ=${ELK_TZ:-UTC}
       - ELASTICSEARCH_HOSTS=http://elasticsearch:9200
-      - SERVER_PUBLICBASEURL=http://localhost:5601
+      - SERVER_PUBLICBASEURL=${KIBANA_PUBLICBASEURL:-http://localhost:5601}
       # SERVER: Generate each key with: openssl rand -hex 32
-      - XPACK_SECURITY_ENCRYPTIONKEY=a32charrandumstring1234567890abc
-      - XPACK_REPORTING_ENCRYPTIONKEY=b32charrandumstring1234567890abc
-      - XPACK_ENCRYPTEDSAVEDOBJECTS_ENCRYPTIONKEY=c32charrandumstring1234567890abc
+      - XPACK_SECURITY_ENCRYPTIONKEY=${XPACK_SECURITY_ENCRYPTIONKEY}
+      - XPACK_REPORTING_ENCRYPTIONKEY=${XPACK_REPORTING_ENCRYPTIONKEY}
+      - XPACK_ENCRYPTEDSAVEDOBJECTS_ENCRYPTIONKEY=${XPACK_ENCRYPTEDSAVEDOBJECTS_ENCRYPTIONKEY}
     ports:
-      # SERVER: Remove this — expose Kibana only via reverse proxy with HTTPS.
-      - "5601:5601"
+      # SERVER: Remove this — expose Kibana only via a reverse proxy with HTTPS.
+      - "${KIBANA_PORT:-5601}:5601"
     networks:
-      - logging-network
+      - elk-network
     healthcheck:
       test:
         [
@@ -132,21 +125,25 @@ services:
       timeout: 10s
       retries: 10
       start_period: 120s
+    # SERVER: Uncomment and tune resource limits before deploying to production
+    # deploy:
+    #   resources:
+    #     limits:
+    #       cpus: '1.0'
+    #       memory: 1G
+    #     reservations:
+    #       cpus: '0.25'
+    #       memory: 256M
 
-# ----------------------------------------------------------
-# VOLUMES — persists Elasticsearch data across restarts
-# SERVER: Bind to a specific host path for easier backups:
-#   es_data:
-#     driver: local
-#     driver_opts:
-#       type: none
-#       o: bind
-#       device: /data/elasticsearch
-# ----------------------------------------------------------
 volumes:
   es_data:
     driver: local
+    # SERVER: Use a bind mount for easier backup control:
+    # driver_opts:
+    #   type: none
+    #   o: bind
+    #   device: /data/elasticsearch
 
 networks:
-  logging-network:
+  elk-network:
     driver: bridge
