@@ -1,19 +1,50 @@
 name: dokuwiki
+
 services:
   dokuwiki:
+    image: dokuwiki/dokuwiki:${DOKUWIKI_VERSION:-latest}
     container_name: dokuwiki
-    image: dokuwiki/dokuwiki:2026-07-14a # other tags: master, <date> or <codename>
-    user: "1000:1000" # adjust to your required user id
-    ports:
-      - "8080:8080" # internal port is 8080, map to what you need
+    # SERVER: Uncomment to ensure DokuWiki starts automatically on boot or failure
+    # restart: unless-stopped
     environment:
-      PHP_TIMEZONE: Europe/Berlin
-      #PHP_MEMORYLIMIT: 256M
-      #PHP_UPLOADLIMIT: 128M
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8080"]
-      interval: 1m
-      timeout: 1s
-      retries: 3
+      - TZ=${DOKUWIKI_TZ:-UTC}
+      - PHP_TIMEZONE=${DOKUWIKI_TZ:-UTC}
+      - PHP_MEMORYLIMIT=${PHP_MEMORYLIMIT:-256M}
+      - PHP_UPLOADLIMIT=${PHP_UPLOADLIMIT:-128M}
     volumes:
-      - ./storage:/storage
+      - dokuwiki-storage:/storage
+      # SERVER: Prefer a bind mount for easier backup control:
+      # - /data/dokuwiki:/storage
+    ports:
+      - "${DOKUWIKI_PORT:-8080}:8080"
+    networks:
+      - dokuwiki-network
+    healthcheck:
+      # The official image ships with a built-in health check, this probes the web UI directly
+      test: ["CMD-SHELL", "curl -sf http://localhost:8080/ || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 60s
+    # SERVER: Uncomment and tune resource limits before deploying to production
+    # deploy:
+    #   resources:
+    #     limits:
+    #       cpus: '1.0'
+    #       memory: 512M
+    #     reservations:
+    #       cpus: '0.25'
+    #       memory: 128M
+
+volumes:
+  dokuwiki-storage:
+    driver: local
+    # SERVER: Bind mount alternative:
+    # driver_opts:
+    #   type: none
+    #   o: bind
+    #   device: /data/dokuwiki
+
+networks:
+  dokuwiki-network:
+    driver: bridge
