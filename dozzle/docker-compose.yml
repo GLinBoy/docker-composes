@@ -1,19 +1,55 @@
-version: "3.8"
+name: dozzle
 
-# Run with docker stack deploy -c dozzle-stack.yml <name>
 services:
   dozzle:
-    image: amir20/dozzle:v10.7.1
+    image: amir20/dozzle:${DOZZLE_VERSION:-latest}
+    container_name: dozzle
+    # SERVER: Uncomment to ensure Dozzle starts automatically on boot or failure
+    # restart: unless-stopped
     environment:
-      - DOZZLE_MODE=swarm
+      - TZ=${DOZZLE_TZ:-UTC}
+      # SERVER: Uncomment to enable container actions (stop/start/restart) — grants control over all containers
+      # - DOZZLE_ENABLE_ACTIONS=true
+      # SERVER: Uncomment to enable shell access into containers
+      # - DOZZLE_ENABLE_SHELL=true
+      # SERVER: Uncomment and configure to require authentication
+      # - DOZZLE_AUTH_PROVIDER=simple
+      # - DOZZLE_AUTH_TTL=1h
+      # Only show containers matching a filter (e.g. label=com.example.app)
+      # - DOZZLE_FILTER=${DOZZLE_FILTER:-}
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
+      - dozzle-data:/data
     ports:
-      - 8080:8080
+      - "${DOZZLE_PORT:-8080}:8080"
     networks:
-      - dozzle
-    deploy:
-      mode: global
+      - dozzle-network
+    healthcheck:
+      # Built-in subcommand that pings Dozzle's own /healthcheck endpoint
+      test: ["CMD", "/dozzle", "healthcheck"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 30s
+    # SERVER: Uncomment and tune resource limits before deploying to production
+    # deploy:
+    #   resources:
+    #     limits:
+    #       cpus: '1.0'
+    #       memory: 256M
+    #     reservations:
+    #       cpus: '0.25'
+    #       memory: 64M
+
+volumes:
+  dozzle-data:
+    driver: local
+    # SERVER: Bind mount alternative:
+    # driver_opts:
+    #   type: none
+    #   o: bind
+    #   device: /data/dozzle
+
 networks:
-  dozzle:
-    driver: overlay
+  dozzle-network:
+    driver: bridge
