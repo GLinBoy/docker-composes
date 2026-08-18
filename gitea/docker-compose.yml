@@ -1,56 +1,99 @@
-version: "3.8"
-
-networks:
-  gitea:
-    external: false
+name: gitea
 
 services:
+  # Gitea — Git forge web application (the "server" role from the official image)
   server:
-    image: gitea/gitea:1.27.1
+    image: gitea/gitea:${GITEA_VERSION:-latest}
     container_name: gitea
+    # SERVER: Uncomment to ensure Gitea starts automatically on boot or failure
+    # restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
     environment:
-      - USER_UID=1000
-      - USER_GID=1000
+      - USER_UID=${GITEA_UID:-1000}
+      - USER_GID=${GITEA_GID:-1000}
+      - TZ=${GITEA_TZ:-UTC}
       - GITEA__database__DB_TYPE=postgres
       - GITEA__database__HOST=db:5432
-      - GITEA__database__NAME=gitea
-      - GITEA__database__USER=gitea
-      - GITEA__database__PASSWD=gitea
-    restart: always
-    networks:
-      - gitea
+      - GITEA__database__NAME=${POSTGRES_DB}
+      - GITEA__database__USER=${POSTGRES_USER}
+      - GITEA__database__PASSWD=${POSTGRES_PASSWORD}
     volumes:
-      - ./gitea:/data
-      - /etc/timezone:/etc/timezone:ro
-      - /etc/localtime:/etc/localtime:ro
+      - gitea_data:/data
     ports:
-      - "3000:3000"
-      - "222:22"
+      # Web UI
+      - "${GITEA_HTTP_PORT:-3000}:3000"
+      # SSH (container port 22 is remapped to 222 on the host)
+      - "${GITEA_SSH_PORT:-222}:22"
+    networks:
+      - gitea-network
     healthcheck:
       test:
         [
-          "CMD",
-          "wget",
-          "--no-verbose",
-          "--tries=1",
-          "--spider",
-          "http://localhost:3000",
+          "CMD-SHELL",
+          "curl -sf http://localhost:3000/api/healthz || exit 1",
         ]
-      interval: 1m
-      timeout: 1s
-      start_period: 1m
-      retries: 3
-    depends_on:
-      - db
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 60s
+    # SERVER: Uncomment and tune resource limits before deploying to production
+    # deploy:
+    #   resources:
+    #     limits:
+    #       cpus: '2.0'
+    #       memory: 2G
+    #     reservations:
+    #       cpus: '0.25'
+    #       memory: 512M
 
+  # PostgreSQL — Gitea's database
   db:
-    image: postgres:16.2-alpine3.19
-    restart: always
+    image: ${POSTGRES_IMAGE:-postgres:16.2-alpine3.19}
+    container_name: gitea-db
+    # SERVER: Uncomment to ensure the database starts automatically on boot or failure
+    # restart: unless-stopped
     environment:
-      - POSTGRES_USER=gitea
-      - POSTGRES_PASSWORD=gitea
-      - POSTGRES_DB=gitea
-    networks:
-      - gitea
+      - POSTGRES_USER=${POSTGRES_USER}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+      - POSTGRES_DB=${POSTGRES_DB}
     volumes:
-      - ./postgres:/var/lib/postgresql/data
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - gitea-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 30s
+    # SERVER: Uncomment and tune resource limits before deploying to production
+    # deploy:
+    #   resources:
+    #     limits:
+    #       cpus: '1.0'
+    #       memory: 1G
+    #     reservations:
+    #       cpus: '0.1'
+    #       memory: 256M
+
+volumes:
+  gitea_data:
+    driver: local
+    # SERVER: Use a bind mount for easier backup control:
+    # driver_opts:
+    #   type: none
+    #   o: bind
+    #   device: /data/gitea
+  postgres_data:
+    driver: local
+    # SERVER: Use a bind mount for easier backup control:
+    # driver_opts:
+    #   type: none
+    #   o: bind
+    #   device: /data/gitea-postgres
+
+networks:
+  gitea-network:
+    driver: bridge
