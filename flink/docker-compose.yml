@@ -1,39 +1,70 @@
-version: "3.8"
 name: flink
-services:
-  flink-jobmanager:
-    image: flink:2.3.0
-    container_name: flink-jobmanager
-    ports:
-      - "8081:8081" # Flink UI
-      - "6123:6123" # RPC Port
-    environment:
-      - JOB_MANAGER_RPC_ADDRESS=flink-jobmanager
-    command: jobmanager
-    healthcheck:
-      test: ["CMD-SHELL", "curl -f http://localhost:8081 || exit 1"]
-      interval: 1m
-      timeout: 1s
-      retries: 3
-    networks:
-      - eventhub-net
 
+services:
+  # JobManager — coordinates the cluster, schedules jobs, exposes the web UI
+  flink-jobmanager:
+    image: flink:${FLINK_VERSION:-latest}
+    container_name: flink-jobmanager
+    # SERVER: Uncomment to ensure the cluster starts automatically on boot or failure
+    # restart: unless-stopped
+    environment:
+      # Internal address the TaskManager uses to reach the JobManager (Docker DNS name)
+      - JOB_MANAGER_RPC_ADDRESS=flink-jobmanager
+    ports:
+      # Flink Web UI
+      - "${FLINK_UI_PORT:-8081}:8081"
+      # JobManager RPC port
+      - "${FLINK_JOBMANAGER_RPC_PORT:-6123}:6123"
+    command: jobmanager
+    networks:
+      - flink-network
+    healthcheck:
+      test: ["CMD-SHELL", "curl -sf http://localhost:8081 || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 30s
+    # SERVER: Uncomment and tune resource limits before deploying to production
+    # deploy:
+    #   resources:
+    #     limits:
+    #       cpus: '2.0'
+    #       memory: 4G
+    #     reservations:
+    #       cpus: '0.5'
+    #       memory: 1G
+
+  # TaskManager — executes the streaming jobs; registers with the JobManager
   flink-taskmanager:
-    image: flink:2.3.0
+    image: flink:${FLINK_VERSION:-latest}
     container_name: flink-taskmanager
+    # SERVER: Uncomment to ensure the cluster starts automatically on boot or failure
+    # restart: unless-stopped
     depends_on:
-      - flink-jobmanager
+      flink-jobmanager:
+        condition: service_healthy
     environment:
       - JOB_MANAGER_RPC_ADDRESS=flink-jobmanager
     command: taskmanager
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://flink-jobmanager:8081/taskmanagers"]
-      interval: 1m
-      timeout: 1s
-      retries: 3
     networks:
-      - eventhub-net
+      - flink-network
+    healthcheck:
+      # Passes once at least one TaskManager is registered with the JobManager
+      test: ["CMD-SHELL", "curl -sf http://flink-jobmanager:8081/taskmanagers | grep -qv '\"taskmanagers\":\\[\\]' || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 30s
+    # SERVER: Uncomment and tune resource limits before deploying to production
+    # deploy:
+    #   resources:
+    #     limits:
+    #       cpus: '2.0'
+    #       memory: 4G
+    #     reservations:
+    #       cpus: '0.5'
+    #       memory: 1G
 
 networks:
-  eventhub-net:
+  flink-network:
     driver: bridge
