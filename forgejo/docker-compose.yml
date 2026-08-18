@@ -1,9 +1,12 @@
 name: forgejo
 
 services:
+  # Forgejo — Git forge web application (the "server" role from the official image)
   server:
-    image: codeberg.org/forgejo/forgejo:16.0.2
+    image: codeberg.org/forgejo/forgejo:${FORGEJO_VERSION:-16.0.2}
     container_name: forgejo
+    # SERVER: Uncomment to ensure Forgejo starts automatically on boot or failure
+    # restart: unless-stopped
     depends_on:
       db:
         condition: service_healthy
@@ -18,28 +21,24 @@ services:
       - FORGEJO__database__PASSWD=${POSTGRES_PASSWORD}
     volumes:
       - forgejo_data:/data
-      - /etc/timezone:/etc/timezone:ro
-      - /etc/localtime:/etc/localtime:ro
     ports:
-      - "3000:3000"
-      - "222:22"
+      # Web UI
+      - "${FORGEJO_HTTP_PORT:-3000}:3000"
+      # SSH (container port 22 is remapped to 222 on the host)
+      - "${FORGEJO_SSH_PORT:-222}:22"
     networks:
       - forgejo-network
     healthcheck:
       test:
         [
-          "CMD",
-          "wget",
-          "--no-verbose",
-          "--tries=1",
-          "--spider",
-          "http://localhost:3000",
+          "CMD-SHELL",
+          "curl -sf http://localhost:3000/api/healthz || exit 1",
         ]
       interval: 30s
       timeout: 10s
       retries: 5
       start_period: 60s
-    # SERVER: Uncomment and tune before deploying to production
+    # SERVER: Uncomment and tune resource limits before deploying to production
     # deploy:
     #   resources:
     #     limits:
@@ -49,9 +48,12 @@ services:
     #       cpus: '0.25'
     #       memory: 512M
 
+  # PostgreSQL — Forgejo's database
   db:
-    image: postgres:18.4-alpine3.23
+    image: ${POSTGRES_IMAGE:-postgres:18.4-alpine3.23}
     container_name: forgejo-db
+    # SERVER: Uncomment to ensure the database starts automatically on boot or failure
+    # restart: unless-stopped
     environment:
       - POSTGRES_USER=${POSTGRES_USER}
       - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
@@ -68,7 +70,7 @@ services:
       timeout: 10s
       retries: 5
       start_period: 30s
-    # SERVER: Uncomment and tune before deploying to production
+    # SERVER: Uncomment and tune resource limits before deploying to production
     # deploy:
     #   resources:
     #     limits:
