@@ -1,30 +1,90 @@
-version: "3.8"
-services:
-  postgresql:
-    image: postgres:16.2-alpine3.19
-    container_name: "gogs-postgresql"
-    volumes:
-      - "./gogs-data/postgresql:/var/lib/postgresql:Z"
-    environment:
-      - "POSTGRES_USER=gogs"
-      - "POSTGRES_PASSWORD=redhat"
-      - "POSTGRES_DB=gogs"
-    ports:
-      - "5432:5432"
+name: gogs
 
+services:
+  # Gogs — Git forge web application
   gogs:
-    image: gogs/gogs:0.14.3
-    container_name: "gogs"
+    image: gogs/gogs:${GOGS_VERSION:-latest}
+    container_name: gogs
+    # SERVER: Uncomment to ensure Gogs starts automatically on boot or failure
+    # restart: unless-stopped
+    depends_on:
+      postgresql:
+        condition: service_healthy
+    environment:
+      - TZ=${GOGS_TZ:-UTC}
     volumes:
-      - "./gogs-data/gogs:/data:Z"
+      - gogs_data:/data
     ports:
-      - "22:22"
-      - "3000:3000"
+      # Web UI
+      - "${GOGS_HTTP_PORT:-3000}:3000"
+      # SSH
+      - "${GOGS_SSH_PORT:-22}:22"
+    networks:
+      - gogs-network
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:3000/"]
-      interval: 1m
-      timeout: 1s
-      retries: 3
+      test: ["CMD-SHELL", "curl -sf http://localhost:3000/ || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 60s
+    # SERVER: Uncomment and tune resource limits before deploying to production
+    # deploy:
+    #   resources:
+    #     limits:
+    #       cpus: '2.0'
+    #       memory: 2G
+    #     reservations:
+    #       cpus: '0.25'
+    #       memory: 512M
+
+  # PostgreSQL — optional database for Gogs (Gogs defaults to embedded SQLite;
+  # use this Postgres by selecting "PostgreSQL" in the setup wizard and using
+  # host "postgresql", port 5432, with the credentials from .env)
+  postgresql:
+    image: ${POSTGRES_IMAGE:-postgres:16.2-alpine3.19}
+    container_name: gogs-postgresql
+    # SERVER: Uncomment to ensure the database starts automatically on boot or failure
+    # restart: unless-stopped
+    environment:
+      - POSTGRES_USER=${POSTGRES_USER:-gogs}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-gogs}
+      - POSTGRES_DB=${POSTGRES_DB:-gogs}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - gogs-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
       start_period: 30s
-    links:
-      - postgresql
+    # SERVER: Uncomment and tune resource limits before deploying to production
+    # deploy:
+    #   resources:
+    #     limits:
+    #       cpus: '1.0'
+    #       memory: 1G
+    #     reservations:
+    #       cpus: '0.1'
+    #       memory: 256M
+
+volumes:
+  gogs_data:
+    driver: local
+    # SERVER: Use a bind mount for easier backup control:
+    # driver_opts:
+    #   type: none
+    #   o: bind
+    #   device: /data/gogs
+  postgres_data:
+    driver: local
+    # SERVER: Use a bind mount for easier backup control:
+    # driver_opts:
+    #   type: none
+    #   o: bind
+    #   device: /data/gogs-postgres
+
+networks:
+  gogs-network:
+    driver: bridge
