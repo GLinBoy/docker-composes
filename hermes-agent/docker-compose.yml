@@ -5,9 +5,12 @@ services:
   hermes-gateway:
     image: ${HERMES_IMAGE:-nousresearch/hermes-agent:latest}
     container_name: hermes-gateway
-    restart: unless-stopped
-    init: true
-    depends_on: []
+    # SERVER: Uncomment to ensure the gateway starts automatically on boot or failure
+    # restart: unless-stopped
+    # Keep the image's default ENTRYPOINT (s6-overlay /init as PID 1) —
+    # `init: true` would skip the s6 supervision tree and break auto-restart.
+    # Runs the messaging gateway in the foreground.
+    command: ["gateway", "run"]
     env_file:
       - path: .env
         required: false
@@ -82,8 +85,6 @@ services:
       timeout: 10s
       retries: 5
       start_period: 30s
-    labels:
-      - "com.docker.compose.service=hermes-gateway"
     # SERVER: Uncomment and tune resource limits before deploying to production
     # deploy:
     #   resources:
@@ -98,7 +99,8 @@ services:
   hermes-dashboard:
     image: ${HERMES_IMAGE:-nousresearch/hermes-agent:latest}
     container_name: hermes-dashboard
-    restart: unless-stopped
+    # SERVER: Uncomment to ensure the dashboard starts automatically on boot or failure
+    # restart: unless-stopped
     depends_on:
       - hermes-gateway
     env_file:
