@@ -1,13 +1,31 @@
-version: "3.8"
 name: haproxy
+
 services:
   haproxy:
-    image: haproxy:3.4.3-alpine3.24
-    command: sh -c "apk add --no-cache curl && mkdir /var/lib/haproxy && haproxy -f /usr/local/etc/haproxy/haproxy.cfg"
+    image: ${HAPROXY_IMAGE:-haproxy:latest}
+    container_name: haproxy
     volumes:
-      - "./haproxy/haproxy.cfg:/usr/local/etc/haproxy/haproxy.cfg"
+      - ./data/haproxy.cfg:/usr/local/etc/haproxy/haproxy.cfg:ro
     ports:
-      - target: 80
-        published: 8080
-        protocol: tcp
-        mode: host
+      - "${HAPROXY_PORT:-8080}:80"
+    networks:
+      - haproxy-network
+    healthcheck:
+      test: ["CMD-SHELL", "nc -z 127.0.0.1 80 || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 30s
+    # SERVER: Uncomment and tune resource limits before deploying to production
+    # deploy:
+    #   resources:
+    #     limits:
+    #       cpus: '1.0'
+    #       memory: 512M
+    #     reservations:
+    #       cpus: '0.25'
+    #       memory: 128M
+
+networks:
+  haproxy-network:
+    driver: bridge
