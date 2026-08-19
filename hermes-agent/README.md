@@ -62,12 +62,17 @@ docker compose exec hermes-gateway hermes gateway setup
 docker compose down
 ```
 
+> Containers stop when the host restarts (no restart policy is set, per repository
+> convention). To have Hermes start automatically, add `restart: unless-stopped` to
+> the services.
+
 ## Configuration
 
 ### Environment Variables
 
 | Variable | Required | Description |
 |----------|----------|-------------|
+| `HERMES_IMAGE` | ❌ | Image tag (default `nousresearch/hermes-agent:latest`) |
 | `HERMES_UID` | ✅ | Host user ID for file permissions |
 | `HERMES_GID` | ✅ | Host group ID for file permissions |
 | `OPENROUTER_API_KEY` | ⚠️ | OpenRouter API key (or other LLM provider) |
