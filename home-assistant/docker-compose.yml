@@ -1,15 +1,51 @@
-version: "3.8"
+name: home-assistant
 
 services:
   homeassistant:
+    image: ${HOME_ASSISTANT_IMAGE:-homeassistant/home-assistant:latest}
     container_name: homeassistant
-    image: homeassistant/home-assistant:2026.8.1
+    # SERVER: Uncomment to ensure Home Assistant starts automatically on boot or failure
+    # restart: unless-stopped
+    environment:
+      # SERVER: Set to your local timezone (e.g. Europe/Amsterdam); UTC is the repo default
+      - TZ=${HOME_ASSISTANT_TZ:-UTC}
+    # SERVER: The config volume is the only persistent data — bind mount it to a
+    #         known host path (e.g. /data/homeassistant) for easier backups.
     volumes:
-      - /PATH_TO_YOUR_CONFIG:/config
+      - home_assistant_config:/config
       - /etc/localtime:/etc/localtime:ro
       - /run/dbus:/run/dbus:ro
-    restart: unless-stopped
+    # SERVER: privileged grants full host access — required for most integrations
+    #         (Zigbee/Z-Wave, Bluetooth, USB). Consider dropping it and mapping only
+    #         the specific /dev devices if you don't need broad device access.
     privileged: true
+    # LOCAL/SERVER: host network mode is recommended by Home Assistant for
+    #         auto-discovery of devices on the LAN. For isolation, remove it and
+    #         publish the port instead:
+    # ports:
+    #   - "8123:8123"
     network_mode: host
-    environment:
-      TZ: Europe/Amsterdam
+    healthcheck:
+      test: ["CMD-SHELL", "nc -z 127.0.0.1 8123 || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 60s
+    # SERVER: Uncomment and tune resource limits before deploying to production
+    # deploy:
+    #   resources:
+    #     limits:
+    #       cpus: '2.0'
+    #       memory: 2G
+    #     reservations:
+    #       cpus: '0.5'
+    #       memory: 512M
+
+volumes:
+  home_assistant_config:
+    driver: local
+    # SERVER: Use a bind mount for easier backup control:
+    # driver_opts:
+    #   type: none
+    #   o: bind
+    #   device: /data/homeassistant
