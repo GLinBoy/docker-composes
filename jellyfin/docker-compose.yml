@@ -1,14 +1,63 @@
+name: jellyfin
+
 services:
   jellyfin:
-    image: jellyfin/jellyfin:10.11.11
+    image: jellyfin/jellyfin:${JELLYFIN_VERSION:-latest}
     container_name: jellyfin
-    user: 1000:1000
+    # SERVER: Run as your host user when binding config/cache/media to host paths
+    # (set PUID/PGID in .env to match `id -u` / `id -g`)
+    user: ${PUID:-1000}:${PGID:-1000}
+    # SERVER: Uncomment to ensure Jellyfin starts automatically on boot or failure
+    # restart: unless-stopped
     environment:
-      - TZ=Europe/Berlin
+      - TZ=${JELLYFIN_TZ:-UTC}
+      # Optional — advertise a public URL for autodiscovery (e.g. behind a reverse proxy)
+      - JELLYFIN_PublishedServerUrl=${JELLYFIN_PUBLISHED_SERVER_URL:-}
     volumes:
-      - ./config:/config
-      - ./cache:/cache
-      - /path/to/media:/media
+      - jellyfin_config:/config
+      - jellyfin_cache:/cache
+      - "${MEDIA_DIR:-/path/to/media}:/media:ro"
     ports:
-      - 8096:8096
-    restart: unless-stopped
+      - "${JELLYFIN_PORT:-8096}:8096"
+      # UDP auto-discovery — remove if you don't need clients to find the server
+      - "${JELLYFIN_DLNA_PORT:-7359}:7359/udp"
+    networks:
+      - jellyfin-network
+    healthcheck:
+      test: ["CMD-SHELL", "curl --noproxy 'localhost' -Lk -fsS http://localhost:8096/health || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 60s
+    # SERVER: Hardware acceleration (optional) — uncomment to expose the GPU/render device:
+    # devices:
+    #   - /dev/dri:/dev/dri
+    # SERVER: Uncomment and tune resource limits before deploying to production
+    # deploy:
+    #   resources:
+    #     limits:
+    #       cpus: '2.0'
+    #       memory: 2G
+    #     reservations:
+    #       cpus: '0.5'
+    #       memory: 512M
+
+volumes:
+  jellyfin_config:
+    driver: local
+    # SERVER: Use a bind mount for easier backup control:
+    # driver_opts:
+    #   type: none
+    #   o: bind
+    #   device: /data/jellyfin/config
+  jellyfin_cache:
+    driver: local
+    # SERVER: Use a bind mount for easier backup control:
+    # driver_opts:
+    #   type: none
+    #   o: bind
+    #   device: /data/jellyfin/cache
+
+networks:
+  jellyfin-network:
+    driver: bridge
