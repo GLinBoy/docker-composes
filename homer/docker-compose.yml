@@ -1,14 +1,46 @@
-version: "3.8"
+name: homer
 
 services:
   homer:
-    image: b4bz/homer:v26.4.2
+    image: b4bz/homer:${HOMER_VERSION:-latest}
     container_name: homer
-    volumes:
-      - /path/to/config/dir:/www/assets # Make sure your local config directory exists
-    ports:
-      - 8080:8080
-    user: 1000:1000 # default
+    # SERVER: Uncomment to ensure Homer starts automatically on boot or failure
+    # restart: unless-stopped
     environment:
-      - INIT_ASSETS=1 # default, requires the config directory to be writable for the container user (see user option)
-    restart: unless-stopped
+      - INIT_ASSETS=${INIT_ASSETS:-1}
+      - SUBFOLDER=${SUBFOLDER:-/}
+      - TZ=${HOMER_TZ:-UTC}
+    volumes:
+      - homer_config:/www/assets
+    ports:
+      - "${HOMER_PORT:-8080}:8080"
+    networks:
+      - homer-network
+    healthcheck:
+      test: ["CMD-SHELL", "wget --no-verbose -Y off --tries=1 --spider http://localhost:8080/ || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 30s
+    # SERVER: Uncomment and tune resource limits before deploying to production
+    # deploy:
+    #   resources:
+    #     limits:
+    #       cpus: '1.0'
+    #       memory: 256M
+    #     reservations:
+    #       cpus: '0.25'
+    #       memory: 64M
+
+volumes:
+  homer_config:
+    driver: local
+    # SERVER: Use a bind mount for easier backup control:
+    # driver_opts:
+    #   type: none
+    #   o: bind
+    #   device: /data/homer
+
+networks:
+  homer-network:
+    driver: bridge
