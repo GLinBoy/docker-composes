@@ -1,7 +1,31 @@
+name: it-tools
+
 services:
   it-tools:
-    image: corentinth/it-tools:2024.10.22-7ca5933
+    image: corentinth/it-tools:${IT_TOOLS_VERSION:-latest}
     container_name: it-tools
+    # SERVER: Uncomment to ensure IT-Tools starts automatically on boot or failure
+    # restart: unless-stopped
     ports:
-      - 8080:80
-    restart: unless-stopped
+      - "${IT_TOOLS_PORT:-8080}:80"
+    networks:
+      - it-tools-network
+    healthcheck:
+      test: ["CMD-SHELL", "curl -sf http://localhost/ || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 30s
+    # SERVER: Uncomment and tune resource limits before deploying to production
+    # deploy:
+    #   resources:
+    #     limits:
+    #       cpus: '1.0'
+    #       memory: 256M
+    #     reservations:
+    #       cpus: '0.25'
+    #       memory: 64M
+
+networks:
+  it-tools-network:
+    driver: bridge
