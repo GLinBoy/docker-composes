@@ -1,15 +1,49 @@
-version: "3.8"
+name: jenkins
 
 services:
   jenkins:
-    image: jenkins/jenkins:2.576-jdk25
-    container_name: "jenkins"
-    privileged: true
-    restart: always
+    image: jenkins/jenkins:${JENKINS_VERSION:-latest}
+    container_name: jenkins
+    # SERVER: Uncomment to ensure Jenkins starts automatically on boot or failure
+    # restart: unless-stopped
+    # Runs as root so it can talk to the host Docker socket (/var/run/docker.sock).
+    # SERVER: This grants Docker-socket access — restrict who can manage Jenkins.
     user: root
-    ports:
-      - "8080:8080"
-      - "50000:50000"
+    environment:
+      - TZ=${JENKINS_TZ:-UTC}
     volumes:
-      # - /home/${myname}/jenkins_compose/jenkins_configuration:/var/jenkins_home
+      - jenkins_home:/var/jenkins_home
       - /var/run/docker.sock:/var/run/docker.sock
+    ports:
+      - "${JENKINS_PORT:-8080}:8080"
+      - "${JENKINS_AGENT_PORT:-50000}:50000"
+    networks:
+      - jenkins-network
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fsS http://localhost:8080/login || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 90s
+    # SERVER: Uncomment and tune resource limits before deploying to production
+    # deploy:
+    #   resources:
+    #     limits:
+    #       cpus: '2.0'
+    #       memory: 2G
+    #     reservations:
+    #       cpus: '0.5'
+    #       memory: 512M
+
+volumes:
+  jenkins_home:
+    driver: local
+    # SERVER: Use a bind mount for easier backup control:
+    # driver_opts:
+    #   type: none
+    #   o: bind
+    #   device: /data/jenkins/jenkins_home
+
+networks:
+  jenkins-network:
+    driver: bridge
