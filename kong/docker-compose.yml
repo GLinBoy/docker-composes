@@ -1,102 +1,137 @@
-version: "3.8"
-
-#Source: https://gist.github.com/pantsel/73d949774bd8e917bfd3d9745d71febf
-
-networks:
-  kong-net:
-    driver: bridge
+name: kong
 
 services:
   #######################################
-  # Postgres: The database used by Kong
+  # Postgres: Kong's configuration database
   #######################################
   kong-database:
-    image: postgres:9.6
-    restart: always
-    networks:
-      - kong-net
+    image: ${POSTGRES_IMAGE:-postgres:16.15-alpine}
+    container_name: kong-database
+    # SERVER: Uncomment to start the database automatically on boot or failure
+    # restart: unless-stopped
     environment:
-      POSTGRES_USER: kong
-      POSTGRES_DB: kong
+      - POSTGRES_USER=${POSTGRES_USER:-kong}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+      # SERVER: Replace the default password with a strong one before deploying —
+      #   generate with: openssl rand -hex 32
+      - POSTGRES_DB=${POSTGRES_DB:-kong}
+    volumes:
+      # Persists Kong's schema and configuration
+      - kong_postgres_data:/var/lib/postgresql/data
     ports:
-      - "5432:5432"
+      # Management port (container port is fixed: 5432)
+      - "${POSTGRES_PORT:-5432}:5432"
+    networks:
+      - kong-network
     healthcheck:
-      test: ["CMD", "pg_isready", "-U", "kong"]
-      interval: 5s
-      timeout: 5s
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 30s
+      timeout: 10s
       retries: 5
+      start_period: 30s
+    # SERVER: Uncomment and tune resource limits before deploying to production
+    # deploy:
+    #   resources:
+    #     limits:
+    #       cpus: '1.0'
+    #       memory: 512M
+    #     reservations:
+    #       cpus: '0.25'
+    #       memory: 256M
 
   #######################################
-  # Kong database migration
+  # Kong database migration (one-shot job)
   #######################################
+  # Bootstraps the Kong schema in Postgres, then exits 0. `kong` waits for this
+  # job via depends_on: condition: service_completed_successfully.
   kong-migration:
-    image: kong:3.9.3
-    command: "kong migrations bootstrap"
-    networks:
-      - kong-net
-    restart: on-failure
-    environment:
-      KONG_PG_HOST: kong-database
-    links:
-      - kong-database
+    image: kong:${KONG_VERSION:-latest}
+    container_name: kong-migration
+    restart: "no"
     depends_on:
-      - kong-database
+      kong-database:
+        condition: service_healthy
+    environment:
+      - KONG_PG_HOST=kong-database
+      - KONG_PG_PORT=5432
+      - KONG_PG_DATABASE=${POSTGRES_DB:-kong}
+      - KONG_PG_USER=${POSTGRES_USER:-kong}
+      - KONG_PG_PASSWORD=${POSTGRES_PASSWORD}
+    command: ["kong", "migrations", "bootstrap"]
+    networks:
+      - kong-network
+    healthcheck:
+      # While the job is alive, report healthy only if the schema is reachable.
+      # Once it exits 0 the container stops and healthchecks no longer run.
+      test: ["CMD", "kong", "migrations", "list"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 10s
 
   #######################################
   # Kong: The API Gateway
   #######################################
   kong:
-    image: kong:3.9.3
-    restart: always
-    networks:
-      - kong-net
-    environment:
-      KONG_PG_HOST: kong-database
-      KONG_PROXY_LISTEN: 0.0.0.0:8000
-      KONG_PROXY_LISTEN_SSL: 0.0.0.0:8443
-      KONG_ADMIN_LISTEN: 0.0.0.0:8001
+    image: kong:${KONG_VERSION:-latest}
+    container_name: kong
+    # SERVER: Uncomment to start Kong automatically on boot or failure
+    # restart: unless-stopped
     depends_on:
-      - kong-migration
-      - kong-database
+      kong-database:
+        condition: service_healthy
+      kong-migration:
+        condition: service_completed_successfully
+    environment:
+      - KONG_PG_HOST=kong-database
+      - KONG_PG_PORT=5432
+      - KONG_PG_DATABASE=${POSTGRES_DB:-kong}
+      - KONG_PG_USER=${POSTGRES_USER:-kong}
+      - KONG_PG_PASSWORD=${POSTGRES_PASSWORD}
+      - KONG_PROXY_LISTEN=0.0.0.0:8000
+      - KONG_PROXY_LISTEN_SSL=0.0.0.0:8443
+      - KONG_ADMIN_LISTEN=0.0.0.0:8001
+      - KONG_ADMIN_ACCESS_LOG=/dev/stdout
+      - KONG_ADMIN_ERROR_LOG=/dev/stderr
+      - TZ=${KONG_TZ:-UTC}
+    ports:
+      # Admin API
+      - "${KONG_ADMIN_PORT:-8001}:8001"
+      # Proxy: entry point for your routed traffic
+      - "${KONG_PROXY_PORT:-8000}:8000"
+      # Proxy TLS
+      - "${KONG_PROXY_TLS_PORT:-8443}:8443"
+    networks:
+      - kong-network
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://kong:8001"]
-      interval: 5s
-      timeout: 2s
-      retries: 15
-    ports:
-      - "8001:8001"
-      - "8000:8000"
+      # Image ships no curl/wget/nc — probe the Admin API with a bash /dev/tcp
+      # socket and expect an HTTP 200 from /status. /bin/sh is dash (no
+      # /dev/tcp), so the script is delegated to bash explicitly.
+      test: ["CMD-SHELL", "bash -c 'exec 3<>/dev/tcp/127.0.0.1/8001; printf \"GET /status HTTP/1.0\\r\\nHost: localhost\\r\\nConnection: close\\r\\n\\r\\n\" >&3; grep -q \"^HTTP/1\\.[01] 200\" <&3; exec 3>&-'"]
 
-  #######################################
-  # Konga database prepare
-  #######################################
-  konga-prepare:
-    image: pantsel/konga:next
-    command: "-c prepare -a postgres -u postgresql://kong@kong-database:5432/konga_db"
-    networks:
-      - kong-net
-    restart: on-failure
-    links:
-      - kong-database
-    depends_on:
-      - kong-database
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 60s
+    # SERVER: Uncomment and tune resource limits before deploying to production
+    # deploy:
+    #   resources:
+    #     limits:
+    #       cpus: '1.0'
+    #       memory: 512M
+    #     reservations:
+    #       cpus: '0.25'
+    #       memory: 256M
 
-  #######################################
-  # Konga: Kong GUI
-  #######################################
-  konga:
-    image: pantsel/konga:next
-    restart: always
-    networks:
-      - kong-net
-    environment:
-      DB_ADAPTER: postgres
-      DB_HOST: kong-database
-      DB_USER: kong
-      TOKEN_SECRET: km1GUr4RkcQD7DewhJPNXrCuZwcKmqjb
-      DB_DATABASE: konga_db
-      NODE_ENV: production
-    depends_on:
-      - kong-database
-    ports:
-      - "1337:1337"
+volumes:
+  kong_postgres_data:
+    driver: local
+    # SERVER: Use a bind mount for easier backup control:
+    # driver_opts:
+    #   type: none
+    #   o: bind
+    #   device: /data/kong/postgres
+
+networks:
+  kong-network:
+    driver: bridge
