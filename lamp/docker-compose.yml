@@ -1,22 +1,47 @@
-version: "3.8"
+name: lamp
 
 services:
   web:
-    container_name: web
-    image: ifpb/php:7.3-apache-pdo
-    build: .
-    networks:
-      - app-tier
-    ports:
-      - 8080:80
-    volumes:
-      - ./src/:/var/www/html/
+    image: ${LAMP_WEB_IMAGE:-lamp-web:latest}
+    container_name: lamp-web
+    build:
+      context: .
+      args:
+        PHP_IMAGE: ${LAMP_PHP_IMAGE:-php:7.3-apache}
     depends_on:
-      - mysql
+      mysql:
+        condition: service_healthy
+    environment:
+      TZ: ${TZ:-Etc/UTC}
+      MYSQL_HOST: mysql
+      MYSQL_DATABASE: ${MYSQL_DATABASE}
+      MYSQL_USER: ${MYSQL_USER}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD}
+    volumes:
+      - ./src:/var/www/html
+    ports:
+      - "${WEB_PORT:-8080}:80"
+    networks:
+      - lamp-network
+    healthcheck:
+      test: ["CMD-SHELL", "curl -sf http://localhost/ || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 30s
+    # SERVER: Uncomment and tune resource limits before deploying to production
+    # deploy:
+    #   resources:
+    #     limits:
+    #       cpus: '1.0'
+    #       memory: 512M
+    #     reservations:
+    #       cpus: '0.25'
+    #       memory: 128M
 
   mysql:
-    container_name: mysql
-    image: mysql:8.1.0
+    image: ${LAMP_MYSQL_IMAGE:-mysql:8.1.0}
+    container_name: lamp-mysql
     command:
       - --default-authentication-plugin=mysql_native_password
     environment:
@@ -24,22 +49,64 @@ services:
       MYSQL_DATABASE: ${MYSQL_DATABASE}
       MYSQL_USER: ${MYSQL_USER}
       MYSQL_PASSWORD: ${MYSQL_PASSWORD}
-    networks:
-      - app-tier
+      TZ: ${TZ:-Etc/UTC}
+    volumes:
+      - mysql_data:/var/lib/mysql
     ports:
-      - 3306:3306
+      - "${MYSQL_PORT:-3306}:3306"
+    networks:
+      - lamp-network
+    healthcheck:
+      test: ["CMD-SHELL", "mysqladmin ping -h localhost -u$${MYSQL_USER} -p$${MYSQL_PASSWORD}"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 30s
+    # SERVER: Uncomment and tune resource limits before deploying to production
+    # deploy:
+    #   resources:
+    #     limits:
+    #       cpus: '1.0'
+    #       memory: 1G
+    #     reservations:
+    #       cpus: '0.25'
+    #       memory: 256M
 
   adminer:
-    container_name: adminer
-    image: adminer:4.7.5
-    restart: always
-    networks:
-      - app-tier
-    ports:
-      - 8081:8080
+    image: ${LAMP_ADMINER_IMAGE:-adminer:4.7.5}
+    container_name: lamp-adminer
     depends_on:
-      - mysql
+      mysql:
+        condition: service_healthy
+    ports:
+      - "${ADMINER_PORT:-8081}:8080"
+    networks:
+      - lamp-network
+    healthcheck:
+      test: ["CMD-SHELL", "curl -sf http://localhost:8080/ || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 30s
+    # SERVER: Uncomment and tune resource limits before deploying to production
+    # deploy:
+    #   resources:
+    #     limits:
+    #       cpus: '0.5'
+    #       memory: 256M
+    #     reservations:
+    #       cpus: '0.1'
+    #       memory: 64M
+
+volumes:
+  mysql_data:
+    driver: local
+    # SERVER: Use a bind mount for easier backup control:
+    # driver_opts:
+    #   type: none
+    #   o: bind
+    #   device: /data/lamp/mysql
 
 networks:
-  app-tier:
+  lamp-network:
     driver: bridge
