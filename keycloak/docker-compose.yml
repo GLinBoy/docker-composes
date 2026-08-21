@@ -1,0 +1,59 @@
+name: keycloak
+
+services:
+  keycloak:
+    image: keycloak/keycloak:${KEYCLOAK_VERSION:-latest}
+    container_name: keycloak
+    # SERVER: Uncomment to start Keycloak automatically on boot or failure
+    # restart: unless-stopped
+    # Development mode + import any realm JSON under /opt/keycloak/data/import.
+    # --health-enabled=true serves /health/ready on the management port (9000) for the healthcheck.
+    # SERVER: Replace with `--start` (production mode) behind a reverse proxy + TLS — README § Production
+    command: ["start-dev", "--import-realm", "--health-enabled=true"]
+    environment:
+      - TZ=${KEYCLOAK_TZ:-UTC}
+      # Admin console is created on first boot from these bootstrap credentials
+      # SERVER: Replace the default password with a strong one before deploying —
+      #   generate with: openssl rand -base64 24 | tr -d '\n'
+      - KC_BOOTSTRAP_ADMIN_USERNAME=${KEYCLOAK_ADMIN:-admin}
+      - KC_BOOTSTRAP_ADMIN_PASSWORD=${KEYCLOAK_ADMIN_PASSWORD:-admin}
+    volumes:
+      # Persists the H2 dev database, realm/global keys, and imported realm data
+      - keycloak_data:/opt/keycloak/data
+      # Sample realm — imported once on first start (see README "Sample Realm")
+      - ./realm-config:/opt/keycloak/data/import
+    ports:
+      # Web UI / Auth HTTP entry point (container port is fixed: 8080)
+      - "${KEYCLOAK_PORT:-8080}:8080"
+    networks:
+      - keycloak-network
+    healthcheck:
+      # Image ships no curl/wget — probe /health/ready on the management port (9000)
+      # with bash /dev/tcp and expect an HTTP 200.
+      test: ["CMD-SHELL", "exec 3<>/dev/tcp/127.0.0.1/9000; printf 'GET /health/ready HTTP/1.0\\r\\nHost: localhost\\r\\nConnection: close\\r\\n\\r\\n' >&3; grep -q '^HTTP/1\\.[01] 200' <&3; exec 3>&-"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 60s
+    # SERVER: Uncomment and tune resource limits before deploying to production
+    # deploy:
+    #   resources:
+    #     limits:
+    #       cpus: '2.0'
+    #       memory: 1G
+    #     reservations:
+    #       cpus: '0.5'
+    #       memory: 512M
+
+volumes:
+  keycloak_data:
+    driver: local
+    # SERVER: Use a bind mount for easier backup control:
+    # driver_opts:
+    #   type: none
+    #   o: bind
+    #   device: /data/keycloak
+
+networks:
+  keycloak-network:
+    driver: bridge
