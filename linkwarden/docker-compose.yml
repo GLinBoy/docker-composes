@@ -1,28 +1,119 @@
+name: linkwarden
+
 services:
-  postgres:
-    image: postgres:16-alpine
-    env_file: .env
-    restart: always
-    volumes:
-      - ./pgdata:/var/lib/postgresql/data
   linkwarden:
-    env_file: .env
-    environment:
-      - DATABASE_URL=postgresql://postgres:${POSTGRES_PASSWORD}@postgres:5432/postgres
-    restart: always
-    # build: . # uncomment to build from source
-    image: ghcr.io/linkwarden/linkwarden:latest # comment to build from source
-    ports:
-      - 3000:3000
-    volumes:
-      - ./data:/data/data
+    image: ghcr.io/linkwarden/linkwarden:${LINKWARDEN_VERSION:-latest}
+    container_name: linkwarden
     depends_on:
-      - postgres
-      - meilisearch
-  meilisearch:
-    image: getmeili/meilisearch:v1.12.8
-    restart: always
-    env_file:
-      - .env
+      postgres:
+        condition: service_healthy
+      meilisearch:
+        condition: service_healthy
+    environment:
+      NEXTAUTH_URL: ${NEXTAUTH_URL:-http://localhost:3000/api/v1/auth}
+      NEXTAUTH_SECRET: ${NEXTAUTH_SECRET}
+      DATABASE_URL: postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-postgres}
+      MEILI_HOST: http://meilisearch:7700
+      MEILI_MASTER_KEY: ${MEILI_MASTER_KEY}
     volumes:
-      - ./meili_data:/meili_data
+      - data:/data/data
+    ports:
+      - "${LINKWARDEN_PORT:-3000}:3000"
+    networks:
+      - linkwarden-network
+    healthcheck:
+      test: ["CMD-SHELL", "curl -sf http://localhost:3000/ || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 60s
+    # SERVER: Uncomment and tune resource limits before deploying to production
+    # deploy:
+    #   resources:
+    #     limits:
+    #       cpus: '1.0'
+    #       memory: 1G
+    #     reservations:
+    #       cpus: '0.25'
+    #       memory: 256M
+
+  postgres:
+    image: ${LINKWARDEN_POSTGRES_IMAGE:-postgres:16-alpine}
+    container_name: linkwarden-postgres
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB:-postgres}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - linkwarden-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 30s
+    # SERVER: Uncomment and tune resource limits before deploying to production
+    # deploy:
+    #   resources:
+    #     limits:
+    #       cpus: '1.0'
+    #       memory: 1G
+    #     reservations:
+    #       cpus: '0.25'
+    #       memory: 256M
+
+  meilisearch:
+    image: ${LINKWARDEN_MEILI_IMAGE:-getmeili/meilisearch:v1.12.8}
+    container_name: linkwarden-meilisearch
+    environment:
+      MEILI_MASTER_KEY: ${MEILI_MASTER_KEY}
+      MEILI_ENV: production
+      MEILI_NO_ANALYTICS: "true"
+    volumes:
+      - meili_data:/meili_data
+    networks:
+      - linkwarden-network
+    healthcheck:
+      test: ["CMD-SHELL", "nc -z 127.0.0.1 7700 || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 10s
+    # SERVER: Uncomment and tune resource limits before deploying to production
+    # deploy:
+    #   resources:
+    #     limits:
+    #       cpus: '1.0'
+    #       memory: 512M
+    #     reservations:
+    #       cpus: '0.25'
+    #       memory: 128M
+
+volumes:
+  data:
+    driver: local
+    # SERVER: Use a bind mount for easier backup control:
+    # driver_opts:
+    #   type: none
+    #   o: bind
+    #   device: /data/linkwarden/data
+  postgres_data:
+    driver: local
+    # SERVER: Use a bind mount for easier backup control:
+    # driver_opts:
+    #   type: none
+    #   o: bind
+    #   device: /data/linkwarden/postgres
+  meili_data:
+    driver: local
+    # SERVER: Use a bind mount for easier backup control:
+    # driver_opts:
+    #   type: none
+    #   o: bind
+    #   device: /data/linkwarden/meili
+
+networks:
+  linkwarden-network:
+    driver: bridge
