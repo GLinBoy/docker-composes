@@ -1,0 +1,33 @@
+# Mailrise configuration - Copy this file to mailrise.conf and edit before running.
+# Full reference: https://github.com/YoRyan/mailrise#configuration
+#
+# Each entry under "configs" maps an email recipient to an Apprise notification
+# service. Senders address mail to <name>@<your-domain> (or <name>.failure@...,
+# <name>.warning@... to select a notification type).
+#
+# Mailrise requires at least one config entry to start — replace the example
+# below with your own Apprise URL. The "-" is *very* important: urls must be a
+# YAML list.
+#
+# configs:
+#   ntfy:
+#     urls:
+#       - ntfy://ntfy.sh/some-topic
+#   telegram:
+#     urls:
+#       - tgram://MY_BOT_TOKEN
+#   "discord@example.com":
+#     urls:
+#       - discord://WEBHOOK_ID/WEBHOOK_TOKEN
+#       # Environment variables can be injected with !env_var NAME
+#       # - !env_var MY_SECRET_URL
+#
+# # Optional: SMTP authentication (credentials are sent in plaintext without TLS)
+# smtp:
+#   auth:
+#     basic:
+#       myuser: mypassword
+configs:
+  example:
+    urls:
+      - ntfy://ntfy.sh/mailrise-test
