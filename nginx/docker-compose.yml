@@ -1,18 +1,39 @@
-version: "3"
-services:
-  #Nginx Service
-  webserver:
-    image: nginx:1.31.3-alpine3.24
-    container_name: webserver
-    restart: unless-stopped
-    tty: true
-    ports:
-      - "80:80"
-      - "443:443"
-    networks:
-      - app-network
+name: nginx
 
-#Docker Networks
+services:
+  nginx:
+    image: nginx:${NGINX_VERSION:-latest}
+    container_name: nginx
+    # SERVER: Uncomment to ensure Nginx starts automatically on boot or failure
+    # restart: unless-stopped
+    volumes:
+      - ./nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./html:/usr/share/nginx/html:ro
+      # SERVER: Prefer a bind mount for the site root:
+      # - /data/nginx/html:/usr/share/nginx/html:ro
+    ports:
+      # SERVER: Keep behind a firewall or reverse proxy, or bind to a specific
+      # interface, when exposed to untrusted networks.
+      - "${NGINX_HTTP_PORT:-80}:80"
+      - "${NGINX_HTTPS_PORT:-443}:443"
+    networks:
+      - nginx-network
+    healthcheck:
+      test: ["CMD-SHELL", "curl -sf http://localhost/ || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 10s
+    # SERVER: Uncomment and tune resource limits before deploying to production
+    # deploy:
+    #   resources:
+    #     limits:
+    #       cpus: '0.5'
+    #       memory: 256M
+    #     reservations:
+    #       cpus: '0.1'
+    #       memory: 64M
+
 networks:
-  app-network:
+  nginx-network:
     driver: bridge
