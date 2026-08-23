@@ -1,28 +1,96 @@
-version: "3.5"
-name: NATS
+name: nats
+
 services:
-  nats:
-    container_name: nats
-    image: nats:2.14.4-alpine3.22
+  # --- Master (seed / first node) ---
+  nats-0:
+    image: ${NATS_IMAGE:-nats:2.14.4-alpine3.22}
+    container_name: nats-0
+    command:
+      - --cluster_name=${NATS_CLUSTER_NAME:-NATS}
+      - --server_name=nats-0
+      - --cluster=nats://0.0.0.0:6222
+      - --routes=nats://nats-0:6222
+      - --http_port=8222
+      - --jetstream
+      - --store_dir=/data
     ports:
-      - "8222:8222"
-    command: "--cluster_name NATS --cluster nats://0.0.0.0:6222 --http_port 8222 "
-    networks: ["nats"]
+      - "${NATS_PORT_CLIENT_0:-4222}:4222" # NATS client connections
+      - "${NATS_PORT_MONITOR_0:-8222}:8222" # HTTP monitoring / healthz
+    volumes:
+      - nats_0_data:/data
+    networks:
+      - nats-network
+    healthcheck:
+      # HTTP monitoring endpoint — returns {"status":"ok"} when ready
+      test: ["CMD-SHELL", "wget -q -O- http://localhost:8222/healthz 2>/dev/null | grep -q ok || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 30s
+    # SERVER: Uncomment and tune resource limits before deploying to production
+    # deploy:
+    #   resources:
+    #     limits:
+    #       cpus: '1.0'
+    #       memory: 512M
+    #     reservations:
+    #       cpus: '0.25'
+    #       memory: 128M
+
+  # --- Slave (second node) ---
   nats-1:
+    image: ${NATS_IMAGE:-nats:2.14.4-alpine3.22}
     container_name: nats-1
-    image: nats:2.14.4-alpine3.22
-    command: "--cluster_name NATS --cluster nats://0.0.0.0:6222
-      --routes=nats://ruser:T0pS3cr3t@nats:6222"
-    networks: ["nats"]
-    depends_on: ["nats"]
-  nats-2:
-    container_name: nats-2
-    image: nats:2.14.4-alpine3.22
-    command: "--cluster_name NATS --cluster nats://0.0.0.0:6222
-      --routes=nats://ruser:T0pS3cr3t@nats:6222"
-    networks: ["nats"]
-    depends_on: ["nats"]
+    depends_on:
+      nats-0:
+        condition: service_started
+    command:
+      - --cluster_name=${NATS_CLUSTER_NAME:-NATS}
+      - --server_name=nats-1
+      - --cluster=nats://0.0.0.0:6222
+      - --routes=nats://nats-0:6222
+      - --http_port=8222
+      - --jetstream
+      - --store_dir=/data
+    ports:
+      - "${NATS_PORT_CLIENT_1:-4223}:4222" # NATS client connections
+      - "${NATS_PORT_MONITOR_1:-8223}:8222" # HTTP monitoring / healthz
+    volumes:
+      - nats_1_data:/data
+    networks:
+      - nats-network
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q -O- http://localhost:8222/healthz 2>/dev/null | grep -q ok || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 30s
+    # SERVER: Uncomment and tune resource limits before deploying to production
+    # deploy:
+    #   resources:
+    #     limits:
+    #       cpus: '1.0'
+    #       memory: 512M
+    #     reservations:
+    #       cpus: '0.25'
+    #       memory: 128M
+
+volumes:
+  nats_0_data:
+    driver: local
+    # SERVER: Bind mount alternative:
+    # driver_opts:
+    #   type: none
+    #   o: bind
+    #   device: /data/nats-0
+  nats_1_data:
+    driver: local
+    # SERVER: Bind mount alternative:
+    # driver_opts:
+    #   type: none
+    #   o: bind
+    #   device: /data/nats-1
 
 networks:
-  nats:
-    name: nats
+  nats-network:
+    driver: bridge
