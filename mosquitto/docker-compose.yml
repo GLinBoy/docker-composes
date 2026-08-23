@@ -1,12 +1,48 @@
-version: "3.8"
 name: mosquitto
+
 services:
   mosquitto:
+    image: ${MOSQUITTO_IMAGE:-eclipse-mosquitto:latest}
     container_name: mosquitto
-    image: eclipse-mosquitto:2.1.2-alpine
-    ports:
-      - "1883:1883"
-      - "9001:9001"
+    environment:
+      TZ: ${MOSQUITTO_TZ:-UTC}
     volumes:
-      - ./data/mosquitto-data:/mosquitto/data
-      - ./data/mosquitto-log:/mosquitto/log
+      - mosquitto_data:/mosquitto/data
+      - ./config/mosquitto.conf:/mosquitto/config/mosquitto.conf:ro
+      # SERVER: Prefer a bind mount for easier backup control:
+      # - /data/mosquitto:/mosquitto/data
+    ports:
+      - "${MOSQUITTO_PORT_MQTT:-1883}:1883" # MQTT over TCP
+      - "${MOSQUITTO_PORT_WS:-9001}:9001" # MQTT over WebSockets
+    networks:
+      - mosquitto-network
+    healthcheck:
+      # Functional check: subscribe + publish on a round-trip topic. Fails when
+      # the broker is down or the subscriber times out after 5s.
+      test: ["CMD-SHELL", "mosquitto_sub -h localhost -t 'mosquitto/health' -C 1 -W 5 & sleep 1; mosquitto_pub -h localhost -t 'mosquitto/health' -m ok; wait"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 30s
+    # SERVER: Uncomment and tune resource limits before deploying to production
+    # deploy:
+    #   resources:
+    #     limits:
+    #       cpus: '0.5'
+    #       memory: 256M
+    #     reservations:
+    #       cpus: '0.25'
+    #       memory: 128M
+
+volumes:
+  mosquitto_data:
+    driver: local
+    # SERVER: Bind mount alternative:
+    # driver_opts:
+    #   type: none
+    #   o: bind
+    #   device: /data/mosquitto
+
+networks:
+  mosquitto-network:
+    driver: bridge
