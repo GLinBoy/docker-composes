@@ -1,0 +1,233 @@
+name: netbox
+
+services:
+  netbox: &netbox
+    image: netboxcommunity/netbox:${NETBOX_VERSION:-latest}
+    container_name: netbox
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      redis-cache:
+        condition: service_healthy
+    environment:
+      # --- Application ---
+      TZ: ${TZ:-UTC}
+      SECRET_KEY: ${NETBOX_SECRET_KEY}
+      SKIP_SUPERUSER: ${NETBOX_SKIP_SUPERUSER:-true}
+      SUPERUSER_EMAIL: ${NETBOX_SUPERUSER_EMAIL:-}
+      SUPERUSER_PASSWORD: ${NETBOX_SUPERUSER_PASSWORD:-}
+      SUPERUSER_API_TOKEN: ${NETBOX_SUPERUSER_API_TOKEN:-}
+      # --- Database ---
+      DB_HOST: postgres
+      DB_PORT: "5432"
+      DB_NAME: ${NETBOX_DB_NAME:-netbox}
+      DB_USER: ${NETBOX_DB_USER:-netbox}
+      DB_PASSWORD: ${NETBOX_DB_PASSWORD}
+      # --- Redis (queues) ---
+      REDIS_HOST: redis
+      REDIS_PORT: "6379"
+      REDIS_PASSWORD: ${NETBOX_REDIS_PASSWORD}
+      REDIS_DATABASE: "0"
+      # --- Redis (cache) ---
+      REDIS_CACHE_HOST: redis-cache
+      REDIS_CACHE_PORT: "6379"
+      REDIS_CACHE_PASSWORD: ${NETBOX_REDIS_CACHE_PASSWORD}
+      REDIS_CACHE_DATABASE: "1"
+      # --- Features (optional) ---
+      GRAPHQL_ENABLED: ${NETBOX_GRAPHQL_ENABLED:-true}
+      METRICS_ENABLED: ${NETBOX_METRICS_ENABLED:-false}
+      WEBHOOKS_ENABLED: ${NETBOX_WEBHOOKS_ENABLED:-true}
+      CORS_ORIGIN_ALLOW_ALL: ${NETBOX_CORS_ORIGIN_ALLOW_ALL:-false}
+      API_TOKEN_PEPPER_1: ${NETBOX_API_TOKEN_PEPPER_1:-}
+      RELEASE_CHECK_URL: ${NETBOX_RELEASE_CHECK_URL:-https://api.github.com/repos/netbox-community/netbox/releases}
+      # --- Email (optional) ---
+      EMAIL_SERVER: ${NETBOX_EMAIL_SERVER:-localhost}
+      EMAIL_PORT: ${NETBOX_EMAIL_PORT:-25}
+      EMAIL_USERNAME: ${NETBOX_EMAIL_USERNAME:-netbox}
+      EMAIL_PASSWORD: ${NETBOX_EMAIL_PASSWORD:-}
+      EMAIL_USE_SSL: ${NETBOX_EMAIL_USE_SSL:-false}
+      EMAIL_USE_TLS: ${NETBOX_EMAIL_USE_TLS:-false}
+      EMAIL_TIMEOUT: ${NETBOX_EMAIL_TIMEOUT:-5}
+      EMAIL_FROM: ${NETBOX_EMAIL_FROM:-netbox@localhost}
+    # The image runs as uid 999 (netbox) in the root group; media/reports/scripts
+    # volumes are group-writable so uploads work without running as root.
+    user: "netbox:root"
+    volumes:
+      - netbox_media_files:/opt/netbox/netbox/media:rw
+      - netbox_reports_files:/opt/netbox/netbox/reports:rw
+      - netbox_scripts_files:/opt/netbox/netbox/scripts:rw
+    ports:
+      # LOCAL: bound to 127.0.0.1 only. SERVER: keep behind a reverse proxy or
+      # expose deliberately (change to "${NETBOX_PORT:-8000}:8080").
+      - "127.0.0.1:${NETBOX_PORT:-8000}:8080"
+    networks:
+      - netbox-network
+    healthcheck:
+      test: ["CMD-SHELL", "curl -sf http://localhost:8080/login/ || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 90s
+    # SERVER: Uncomment and tune resource limits before deploying to production
+    # deploy:
+    #   resources:
+    #     limits:
+    #       cpus: '2.0'
+    #       memory: 2G
+    #     reservations:
+    #       cpus: '0.5'
+    #       memory: 512M
+
+  netbox-worker:
+    <<: *netbox
+    container_name: netbox-worker
+    depends_on:
+      netbox:
+        condition: service_healthy
+    command:
+      - /opt/netbox/venv/bin/python
+      - /opt/netbox/netbox/manage.py
+      - rqworker
+    ports: []
+    healthcheck:
+      test: ["CMD-SHELL", "ps -aux | grep -v grep | grep -q rqworker || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 30s
+
+  postgres:
+    image: ${NETBOX_DB_IMAGE:-docker.io/postgres:17.11-alpine}
+    container_name: netbox-postgres
+    environment:
+      POSTGRES_DB: ${NETBOX_DB_NAME:-netbox}
+      POSTGRES_USER: ${NETBOX_DB_USER:-netbox}
+      POSTGRES_PASSWORD: ${NETBOX_DB_PASSWORD}
+    volumes:
+      - netbox_postgres_data:/var/lib/postgresql/data
+    networks:
+      - netbox-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -q -t 2 -d $${POSTGRES_DB} -U $${POSTGRES_USER}"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 20s
+    # SERVER: Uncomment and tune resource limits before deploying to production
+    # deploy:
+    #   resources:
+    #     limits:
+    #       cpus: '1.0'
+    #       memory: 1G
+    #     reservations:
+    #       cpus: '0.25'
+    #       memory: 256M
+
+  redis:
+    image: ${NETBOX_REDIS_IMAGE:-docker.io/valkey/valkey:8.1-alpine}
+    container_name: netbox-redis
+    # Evaluate $REDIS_PASSWORD at container start ($$ escapes compose interpolation)
+    command:
+      - sh
+      - -c
+      - valkey-server --appendonly yes --requirepass $$REDIS_PASSWORD
+    environment:
+      REDIS_PASSWORD: ${NETBOX_REDIS_PASSWORD}
+    volumes:
+      - netbox_redis_data:/data
+    networks:
+      - netbox-network
+    healthcheck:
+      test: ["CMD-SHELL", "[ $$(valkey-cli --pass \"$${REDIS_PASSWORD}\" ping) = 'PONG' ]"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 10s
+    # SERVER: Uncomment and tune resource limits before deploying to production
+    # deploy:
+    #   resources:
+    #     limits:
+    #       cpus: '0.5'
+    #       memory: 256M
+    #     reservations:
+    #       cpus: '0.1'
+    #       memory: 64M
+
+  redis-cache:
+    image: ${NETBOX_REDIS_IMAGE:-docker.io/valkey/valkey:8.1-alpine}
+    container_name: netbox-redis-cache
+    command:
+      - sh
+      - -c
+      - valkey-server --requirepass $$REDIS_PASSWORD
+    environment:
+      REDIS_PASSWORD: ${NETBOX_REDIS_CACHE_PASSWORD}
+    volumes:
+      - netbox_redis_cache_data:/data
+    networks:
+      - netbox-network
+    healthcheck:
+      test: ["CMD-SHELL", "[ $$(valkey-cli --pass \"$${REDIS_PASSWORD}\" ping) = 'PONG' ]"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 10s
+    # SERVER: Uncomment and tune resource limits before deploying to production
+    # deploy:
+    #   resources:
+    #     limits:
+    #       cpus: '0.5'
+    #       memory: 256M
+    #     reservations:
+    #       cpus: '0.1'
+    #       memory: 64M
+
+volumes:
+  netbox_media_files:
+    driver: local
+    # SERVER: Use a bind mount for easier backup control:
+    # driver_opts:
+    #   type: none
+    #   o: bind
+    #   device: /data/netbox/media
+  netbox_reports_files:
+    driver: local
+    # SERVER: Use a bind mount for easier backup control:
+    # driver_opts:
+    #   type: none
+    #   o: bind
+    #   device: /data/netbox/reports
+  netbox_scripts_files:
+    driver: local
+    # SERVER: Use a bind mount for easier backup control:
+    # driver_opts:
+    #   type: none
+    #   o: bind
+    #   device: /data/netbox/scripts
+  netbox_postgres_data:
+    driver: local
+    # SERVER: Use a bind mount for easier backup control:
+    # driver_opts:
+    #   type: none
+    #   o: bind
+    #   device: /data/netbox/postgres
+  netbox_redis_data:
+    driver: local
+    # SERVER: Use a bind mount for easier backup control:
+    # driver_opts:
+    #   type: none
+    #   o: bind
+    #   device: /data/netbox/redis
+  netbox_redis_cache_data:
+    driver: local
+    # SERVER: Use a bind mount for easier backup control:
+    # driver_opts:
+    #   type: none
+    #   o: bind
+    #   device: /data/netbox/redis-cache
+
+networks:
+  netbox-network:
+    driver: bridge
