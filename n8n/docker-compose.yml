@@ -1,16 +1,67 @@
 name: n8n
+
 services:
   n8n:
-    image: n8nio/n8n:2.34.4
-    ports:
-      - "127.0.0.1:5678:5678"
+    image: ${N8N_IMAGE:-n8nio/n8n:latest}
+    container_name: n8n
     environment:
-      - N8N_HOST=localhost
-      - N8N_PORT=5678
-      - N8N_PROTOCOL=http
-      - NODE_ENV=dev
-      - WEBHOOK_URL=http://localhost
-      - GENERIC_TIMEZONE=Etc/UTC
+      # Editor URL / webhook base — SERVER: set N8N_HOST to your domain and
+      # switch N8N_PROTOCOL to https when exposed publicly (or terminate TLS at
+      # a reverse proxy and keep this stack bound to localhost).
+      N8N_HOST: ${N8N_HOST:-localhost}
+      N8N_PROTOCOL: ${N8N_PROTOCOL:-http}
+      N8N_PORT: ${N8N_PORT:-5678}
+      # SERVER: publicly reachable webhook URL. For local use the editor URL is
+      # fine; behind a reverse proxy set this to https://n8n.example.com
+      WEBHOOK_URL: ${WEBHOOK_URL:-http://localhost}
+      # LOCAL: development mode (watch + debug). SERVER: set to production
+      NODE_ENV: ${N8N_NODE_ENV:-dev}
+      # Timezone used by schedule/cron triggers
+      GENERIC_TIMEZONE: ${N8N_TZ:-UTC}
     volumes:
-      - ./data/n8n_data:/home/node/.n8n
-      - ./data/local-files:/files
+      - n8n_data:/home/node/.n8n
+      - n8n_files:/files
+      # SERVER: Prefer a bind mount for easier backup control:
+      # - /data/n8n:/home/node/.n8n
+    ports:
+      # LOCAL: bound to 127.0.0.1 only. SERVER: keep behind a reverse proxy or
+      # expose deliberately (change to "${N8N_PORT_EXTERNAL:-5678}:5678").
+      - "127.0.0.1:${N8N_PORT_EXTERNAL:-5678}:5678"
+    networks:
+      - n8n-network
+    healthcheck:
+      # The image ships wget (no curl). /healthz returns {"status":"ok"} when ready
+      test: ["CMD-SHELL", "wget -q -O- http://localhost:5678/healthz 2>/dev/null | grep -q '\"status\":\"ok\"' || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 30s
+    # SERVER: Uncomment and tune resource limits before deploying to production
+    # deploy:
+    #   resources:
+    #     limits:
+    #       cpus: '1.0'
+    #       memory: 1G
+    #     reservations:
+    #       cpus: '0.25'
+    #       memory: 256M
+
+volumes:
+  n8n_data:
+    driver: local
+    # SERVER: Bind mount alternative:
+    # driver_opts:
+    #   type: none
+    #   o: bind
+    #   device: /data/n8n
+  n8n_files:
+    driver: local
+    # SERVER: Bind mount alternative:
+    # driver_opts:
+    #   type: none
+    #   o: bind
+    #   device: /data/n8n/files
+
+networks:
+  n8n-network:
+    driver: bridge
