@@ -2,7 +2,7 @@ name: mariadb
 
 services:
   mariadb:
-    image: ${MARIADB_IMAGE:-mariadb:12.3.2}
+    image: ${MARIADB_IMAGE:-mariadb:latest}
     container_name: mariadb
     environment:
       MARIADB_DATABASE: ${MARIADB_DATABASE}
@@ -17,7 +17,14 @@ services:
     networks:
       - mariadb-network
     healthcheck:
-      test: ["CMD", "healthcheck.sh", "--su-mysql", "--connect", "--innodb_initialized"]
+      test:
+        [
+          "CMD",
+          "healthcheck.sh",
+          "--su-mysql",
+          "--connect",
+          "--innodb_initialized",
+        ]
       interval: 30s
       timeout: 10s
       retries: 5
