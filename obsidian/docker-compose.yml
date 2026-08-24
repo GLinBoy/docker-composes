@@ -1,20 +1,72 @@
 name: obsidian
+
 services:
   obsidian:
+    image: linuxserver/obsidian:${OBSIDIAN_VERSION:-latest}
     container_name: obsidian
-    image: linuxserver/obsidian:1.13.6
+    # SERVER: This image is a desktop GUI streamed to the browser; the default
+    # Docker seccomp profile can block Electron/Chromium syscalls on older hosts.
+    # Only keep this when needed — it disables a Docker security layer.
     security_opt:
       - seccomp:unconfined
     environment:
-      - PUID=1000
-      - PGID=1000
-      - TZ=Etc/UTC
-      - CUSTOM_USER=usr
-      - PASSWORD=usr@pass
+      # Match these to your host user/group (id your_user)
+      PUID: ${PUID:-1000}
+      PGID: ${PGID:-1000}
+      # Timezone (default: UTC)
+      TZ: ${TZ:-UTC}
+      # Optional HTTP Basic auth. Leave empty for no auth (default).
+      # SERVER: Set both when exposing the container, or put it behind a
+      # reverse proxy with its own authentication.
+      CUSTOM_USER: ${OBSIDIAN_USER:-}
+      PASSWORD: ${OBSIDIAN_PASSWORD:-}
     volumes:
-      - ./data/config:/config/
-      - ./data/obsidian:/obsidian
+      - obsidian_config:/config
+      - obsidian_data:/obsidian
+      # SERVER: Prefer bind mounts for easier backup control:
+      # - /data/obsidian/config:/config
+      # - /data/obsidian/vaults:/obsidian
     ports:
-      - 3000:3000
-      - 3001:3001
+      - "${OBSIDIAN_HTTP_PORT:-3000}:3000" # Desktop GUI over HTTP
+      - "${OBSIDIAN_HTTPS_PORT:-3001}:3001" # Desktop GUI over HTTPS (default)
+    # Needed for Electron applications to function properly
     shm_size: "1gb"
+    networks:
+      - obsidian-network
+    healthcheck:
+      # The GUI is served over HTTPS with a self-signed certificate by default,
+      # so curl needs -k to probe it.
+      test: ["CMD-SHELL", "curl -fsS -k https://localhost:3001/ || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 40s
+    # SERVER: Uncomment and tune resource limits before deploying to production
+    # deploy:
+    #   resources:
+    #     limits:
+    #       cpus: '2.0'
+    #       memory: 2G
+    #     reservations:
+    #       cpus: '0.5'
+    #       memory: 1G
+
+volumes:
+  obsidian_config:
+    driver: local
+    # SERVER: Use a bind mount for easier backup control:
+    # driver_opts:
+    #   type: none
+    #   o: bind
+    #   device: /data/obsidian/config
+  obsidian_data:
+    driver: local
+    # SERVER: Use a bind mount for easier backup control:
+    # driver_opts:
+    #   type: none
+    #   o: bind
+    #   device: /data/obsidian/vaults
+
+networks:
+  obsidian-network:
+    driver: bridge
