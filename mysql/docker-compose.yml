@@ -2,7 +2,7 @@ name: mysql
 
 services:
   db:
-    image: ${MYSQL_IMAGE:-mysql:26.7.0}
+    image: ${MYSQL_IMAGE:-mysql:latest}
     container_name: mysql
     command:
       - --character-set-server=utf8mb4
@@ -25,7 +25,11 @@ services:
     healthcheck:
       # Image ships mysqladmin — ping requires valid credentials, so the check
       # fails only when the server is truly down or unauthenticated.
-      test: ["CMD-SHELL", "mysqladmin ping -h localhost -uroot -p$${MYSQL_ROOT_PASSWORD} 2>/dev/null | grep -q 'mysqld is alive' || exit 1"]
+      test:
+        [
+          "CMD-SHELL",
+          "mysqladmin ping -h localhost -uroot -p$${MYSQL_ROOT_PASSWORD} 2>/dev/null | grep -q 'mysqld is alive' || exit 1",
+        ]
       interval: 30s
       timeout: 10s
       retries: 5
