@@ -2,7 +2,7 @@ name: mongodb
 
 services:
   mongo:
-    image: ${MONGO_IMAGE:-mongo:8.2.12}
+    image: ${MONGO_IMAGE:-mongo:latest}
     container_name: mongo
     environment:
       MONGO_INITDB_ROOT_USERNAME: ${MONGO_ROOT_USER}
@@ -15,7 +15,11 @@ services:
     networks:
       - mongodb-network
     healthcheck:
-      test: ["CMD-SHELL", "mongosh --quiet --eval 'db.runCommand({ ping: 1 })' mongodb://$${MONGO_INITDB_ROOT_USERNAME}:$${MONGO_INITDB_ROOT_PASSWORD}@localhost:27017/admin || exit 1"]
+      test:
+        [
+          "CMD-SHELL",
+          "mongosh --quiet --eval 'db.runCommand({ ping: 1 })' mongodb://$${MONGO_INITDB_ROOT_USERNAME}:$${MONGO_INITDB_ROOT_PASSWORD}@localhost:27017/admin || exit 1",
+        ]
       interval: 30s
       timeout: 10s
       retries: 5
