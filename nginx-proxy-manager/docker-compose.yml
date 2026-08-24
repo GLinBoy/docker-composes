@@ -1,37 +1,108 @@
-version: "3.8"
+name: nginx-proxy-manager
 
 services:
-  app:
-    image: "jc21/nginx-proxy-manager:2.15.1"
-    restart: unless-stopped
-    ports:
-      # These ports are in format <host-port>:<container-port>
-      - "80:80" # Public HTTP Port
-      - "443:443" # Public HTTPS Port
-      - "81:81" # Admin Web Port
-      # Add any other Stream port you want to expose
-      # - '21:21' # FTP
-    environment:
-      TZ: "Australia/Brisbane"
-      # Postgres parameters:
-      DB_POSTGRES_HOST: "db"
-      DB_POSTGRES_PORT: "5432"
-      DB_POSTGRES_USER: "npm"
-      DB_POSTGRES_PASSWORD: "npmpass"
-      DB_POSTGRES_NAME: "npm"
-      # Uncomment this if IPv6 is not enabled on your host
-      # DISABLE_IPV6: 'true'
-    volumes:
-      - ./data:/data
-      - ./letsencrypt:/etc/letsencrypt
+  npm:
+    image: jc21/nginx-proxy-manager:${NPM_VERSION:-latest}
+    container_name: npm
     depends_on:
-      - db
+      db:
+        condition: service_healthy
+    environment:
+      # Timezone (default: UTC)
+      TZ: ${TZ:-UTC}
+      # Postgres connection
+      DB_POSTGRES_HOST: db
+      DB_POSTGRES_PORT: "5432"
+      DB_POSTGRES_USER: ${NPM_DB_USER:-npm}
+      DB_POSTGRES_PASSWORD: ${NPM_DB_PASSWORD}
+      DB_POSTGRES_NAME: ${NPM_DB_NAME:-npm}
+      # SERVER: Set to true if IPv6 is not enabled on the host, so the container
+      # does not try to bind an IPv6 socket
+      # DISABLE_IPV6: ${NPM_DISABLE_IPV6:-false}
+    volumes:
+      - npm_data:/data
+      - npm_letsencrypt:/etc/letsencrypt
+      # SERVER: Prefer bind mounts for easier backup control:
+      # - /data/npm/data:/data
+      # - /data/npm/letsencrypt:/etc/letsencrypt
+    ports:
+      # Public HTTP / HTTPS and admin web UI. SERVER: keep 80/443 behind a
+      # firewall or bind to a specific interface when exposing to the internet.
+      - "${NPM_HTTP_PORT:-80}:80"
+      - "${NPM_HTTPS_PORT:-443}:443"
+      - "${NPM_ADMIN_PORT:-81}:81"
+      # Add any other Stream port you want to expose, e.g. FTP:
+      # - "${NPM_FTP_PORT:-21}:21"
+    networks:
+      - npm-network
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fsS http://localhost:81/login || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 40s
+    # SERVER: Uncomment and tune resource limits before deploying to production
+    # deploy:
+    #   resources:
+    #     limits:
+    #       cpus: '1.0'
+    #       memory: 512M
+    #     reservations:
+    #       cpus: '0.25'
+    #       memory: 128M
 
   db:
-    image: postgres:17
+    image: ${NPM_DB_IMAGE:-docker.io/postgres:17-alpine}
+    container_name: npm-db
     environment:
-      POSTGRES_USER: "npm"
-      POSTGRES_PASSWORD: "npmpass"
-      POSTGRES_DB: "npm"
+      POSTGRES_USER: ${NPM_DB_USER:-npm}
+      POSTGRES_PASSWORD: ${NPM_DB_PASSWORD}
+      POSTGRES_DB: ${NPM_DB_NAME:-npm}
     volumes:
-      - ./postgresql:/var/lib/postgresql
+      - npm_postgres_data:/var/lib/postgresql/data
+      # SERVER: Prefer a bind mount for easier backup control:
+      # - /data/npm/postgres:/var/lib/postgresql/data
+    networks:
+      - npm-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -q -t 2 -d $${POSTGRES_DB} -U $${POSTGRES_USER}"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 20s
+    # SERVER: Uncomment and tune resource limits before deploying to production
+    # deploy:
+    #   resources:
+    #     limits:
+    #       cpus: '1.0'
+    #       memory: 1G
+    #     reservations:
+    #       cpus: '0.25'
+    #       memory: 256M
+
+volumes:
+  npm_data:
+    driver: local
+    # SERVER: Use a bind mount for easier backup control:
+    # driver_opts:
+    #   type: none
+    #   o: bind
+    #   device: /data/npm/data
+  npm_letsencrypt:
+    driver: local
+    # SERVER: Use a bind mount for easier backup control:
+    # driver_opts:
+    #   type: none
+    #   o: bind
+    #   device: /data/npm/letsencrypt
+  npm_postgres_data:
+    driver: local
+    # SERVER: Use a bind mount for easier backup control:
+    # driver_opts:
+    #   type: none
+    #   o: bind
+    #   device: /data/npm/postgres
+
+networks:
+  npm-network:
+    driver: bridge
