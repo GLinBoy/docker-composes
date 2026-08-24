@@ -22,32 +22,24 @@ This document provides essential guidance for AI assistants contributing to this
 ### Image Versioning
 
 Every image version is read from an env variable defined in `.env.example` / `.env` and
-referenced in compose with a fallback default — **never hardcode a version tag inside the
-compose file**.
+referenced in compose with a `latest` fallback default — **never hardcode a version tag and never
+use an exact-pinned fallback default inside the compose file**:
 
-- **Application images** (the main product, e.g. an app server) use a `latest` fallback default:
+```yaml
+image: ${IMMICH_VERSION:-ghcr.io/immich-app/immich-server:latest}
+image: ${POSTGRES_IMAGE:-postgres:latest}
+```
 
-  ```yaml
-  image: ghcr.io/immich-app/immich-server:${IMMICH_VERSION:-latest}
-  ```
-
-- **Dependency images** (databases, caches, proxies, etc.) use an **exact-pinned fallback**
-  default (never `latest`), so an accidental upgrade can't break a stack:
-
-  ```yaml
-  image: ${IMMICH_DATABASE_IMAGE:-ghcr.io/immich-app/postgres:14-vectorchord0.4.3-pgvectors0.2.0@sha256:...}
-  ```
-
-- **`.env.example` / `.env` must contain the exact value to deploy** — an exact version for
-  app images, and the exact image (tag or `tag@sha256:...`) for dependency images (never `latest`):
+- **`.env.example` / `.env` must contain the exact value to deploy** (never `latest`) — for every
+  image, app or dependency:
 
   ```bash
   IMMICH_VERSION=v3.1.0
-  IMMICH_DATABASE_IMAGE=ghcr.io/immich-app/postgres:14-vectorchord0.4.3-pgvectors0.2.0@sha256:...
+  POSTGRES_IMAGE=postgres:18.4-alpine3.23
   ```
 
-- To update an app or dependency, bump the exact value in `.env` and re-run
-  `docker compose up -d` — no compose file changes required.
+- To update any image, bump the exact value in `.env` and re-run `docker compose up -d` — no
+  compose file changes required.
 - Prefer Alpine or slim variants when available.
 
 ### Cluster Services

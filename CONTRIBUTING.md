@@ -97,7 +97,7 @@ Keys inside every service block must appear in this order:
 ```yaml
 services:
   my-service:
-    image: # 1. Image — pinned to exact version tag
+    image: # 1. Image — ${VAR:-image:latest} (exact version only in .env / .env.example)
     container_name: # 2. Explicit container name
     restart: # 3. Restart policy
     depends_on: # 4. Service dependencies (with condition:)
@@ -155,36 +155,31 @@ test: ["CMD", "rabbitmq-diagnostics", "ping"]
 ### 4. Image Versioning
 
 **All image versions are read from env variables** in `.env.example` / `.env` and referenced
-in compose with a fallback default. Never hardcode a version tag inside `docker-compose.yml`.
-
-- **Application images** (the main product, e.g. an app server) use a `latest` fallback default,
-  with the **exact version** pinned in `.env.example` / `.env`.
+in compose with a `latest` fallback default. Never hardcode a version tag and never use an
+exact-pinned fallback default inside `docker-compose.yml`.
 
 ```yaml
-# ✅ Correct — app version read from env, defaults to latest in compose
+# ✅ Correct — app image read from env, defaults to latest in compose
 image: ghcr.io/immich-app/immich-server:${IMMICH_VERSION:-latest}
 
-# .env.example / .env must contain the exact version to deploy
+# ✅ Correct — dependency image read from env, also defaults to latest in compose
+image: ${DATABASE_IMAGE:-postgres:latest}
+image: ${REDIS_IMAGE:-redis:latest}
+image: ${PROXY_IMAGE:-nginx:latest}
+
+# .env.example / .env must contain the exact version to deploy (never latest)
 # IMMICH_VERSION=v3.1.0
-```
+# DATABASE_IMAGE=postgres:18.4-alpine3.23
 
-- **Dependency images** (databases, caches, proxies, etc.) use an **exact-pinned fallback**
-  default — never `latest` or a bare image name — so an accidental upgrade can't break a stack.
-
-```yaml
-# ✅ Correct — dependency image read from env, exact-pinned fallback
-image: ${DATABASE_IMAGE:-postgres:17.2-alpine}
-image: ${REDIS_IMAGE:-redis:7.4-alpine}
-image: ${PROXY_IMAGE:-nginx:1.27-alpine}
-
-# ❌ Wrong — no version variable, or defaulting to latest
+# ❌ Wrong — no version variable, or an exact-pinned fallback default
 image: postgres:latest
 image: redis
 image: nginx:latest
+image: ${DATABASE_IMAGE:-postgres:18.4-alpine3.23}
 ```
 
 - **Prefer Alpine or slim variants** when available — they are smaller and have a reduced attack surface.
-- Use the format `name:MAJOR.MINOR-alpine` or `name:MAJOR.MINOR.PATCH-alpine`.
+- Use the format `name:MAJOR.MINOR-alpine` or `name:MAJOR.MINOR.PATCH-alpine` in `.env.example` / `.env`.
 - To update an app or dependency, bump the exact value in `.env` and re-run
   `docker compose up -d` — no compose file changes required.
 
@@ -385,7 +380,7 @@ File & Structure
 
 Services
 [ ] container_name: defined on every service
-[ ] image: pinned to exact version tag (no "latest")
+[ ] image: read from ${VAR} with a `latest` fallback default (exact version only in .env / .env.example)
 [ ] Alpine/slim image used where available
 [ ] restart: policy defined on every service
 [ ] Service keys in correct order (image → container_name → restart → depends_on → environment → volumes → ports → networks → healthcheck)

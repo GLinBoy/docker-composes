@@ -27,7 +27,7 @@ only produce a structured report.
 ### Per-Service Rules
 Check every service in the file for the following, and report any violation:
 
-1. `image:` is pinned to an exact version tag — no "latest", no bare image name
+1. `image:` is read from an env variable with a `latest` fallback default — never a hardcoded or exact-pinned tag in the compose file (exact version goes in `.env` / `.env.example` only)
 2. Alpine or slim variant is used where one is available
 3. `container_name:` is explicitly defined and lowercase-hyphenated
 4. `restart:` policy is defined (recommended: unless-stopped)
@@ -94,9 +94,10 @@ add new ones wherever a locally-disabled feature needs server-side action.
 
 ### Per-Service Rules — apply to every service
 
-1. Pin `image:` to the latest stable exact version tag
+1. Set `image:` to `${VAR:-image:latest}` — read from an env variable with a `latest` fallback default
    - Prefer Alpine or slim variant where available
-   - Never use "latest" or a bare image name
+   - Never hardcode a version tag, and never use an exact-pinned fallback default inside the compose file
+   - The exact version to deploy lives only in `.env` / `.env.example`
 2. Add `container_name:` if missing — lowercase-hyphenated
 3. Add `restart: unless-stopped` if missing
 4. Convert bare `depends_on:` to use `condition: service_healthy` (or service_started
@@ -153,7 +154,7 @@ Checklist:
 [ ] No version: field
 [ ] name: field present and lowercase-hyphenated
 [ ] Every service has container_name:
-[ ] Every image is pinned to an exact version (no "latest")
+[ ] Every image uses `${VAR:-image:latest}` — no hardcoded or exact-pinned tag (exact version only in .env/.env.example)
 [ ] Alpine/slim image used where available
 [ ] Every service has restart: policy
 [ ] depends_on uses condition: (not bare)
@@ -181,7 +182,7 @@ Follow these conventions strictly:
 - No version: field
 - name: field at top, lowercase-hyphenated
 - Top-level order: name → services → volumes → networks
-- Use the latest stable Alpine or slim image for every service
+- Use `${VAR:-image:latest}` for every image — the exact version to deploy lives only in `.env` / `.env.example`
 - Every service must have:
   - container_name: (lowercase-hyphenated)
   - restart: unless-stopped
