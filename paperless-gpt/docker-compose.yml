@@ -1,13 +1,82 @@
+name: paperless-gpt
+
 services:
   paperless-gpt:
-    image: icereed/paperless-gpt:v0.27.0
+    image: ${PAPERLESS_GPT_IMAGE:-icereed/paperless-gpt:latest}
     container_name: paperless-gpt
+    # SERVER: Uncomment to ensure paperless-gpt starts automatically on boot or failure
+    # restart: unless-stopped
     environment:
-      - PAPERLESS_BASE_URL=http://paperless:8000
-      - PAPERLESS_API_TOKEN=your_paperless_api_token_here
-      - LLM_PROVIDER=openai
-      - LLM_MODEL=gpt-4o
-      - OPENAI_API_KEY=your_openai_api_key_here
+      TZ: ${PAPERLESS_GPT_TZ:-UTC}
+      PUID: ${PUID:-10001}
+      PGID: ${PGID:-10001}
+      PAPERLESS_BASE_URL: ${PAPERLESS_BASE_URL:-http://paperless-ngx:8000}
+      PAPERLESS_API_TOKEN: ${PAPERLESS_API_TOKEN}
+      PAPERLESS_PUBLIC_URL: ${PAPERLESS_PUBLIC_URL:-}
+      MANUAL_TAG: ${MANUAL_TAG:-paperless-gpt}
+      AUTO_TAG: ${AUTO_TAG:-paperless-gpt-auto}
+      FAIL_TAG: ${FAIL_TAG:-paperless-gpt-failed}
+      LLM_PROVIDER: ${LLM_PROVIDER:-openai}
+      LLM_MODEL: ${LLM_MODEL:-gpt-4o}
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+      OLLAMA_HOST: ${OLLAMA_HOST:-}
+      LLM_LANGUAGE: ${LLM_LANGUAGE:-English}
+      OCR_PROVIDER: ${OCR_PROVIDER:-llm}
+      LOG_LEVEL: ${LOG_LEVEL:-info}
+    volumes:
+      - paperless-gpt_data:/app/db
+      - paperless-gpt_config:/app/config
+      - paperless-gpt_prompts:/app/prompts
+      # SERVER: Prefer bind mounts for easier backup control:
+      # - /data/paperless-gpt/db:/app/db
+      # - /data/paperless-gpt/config:/app/config
+      # - /data/paperless-gpt/prompts:/app/prompts
     ports:
-      - 8080:8080
-    restart: unless-stopped
+      # LOCAL: bound to 127.0.0.1 only — paperless-gpt has NO built-in auth.
+      # SERVER: keep behind an authenticated reverse proxy; change to
+      # "0.0.0.0:${PAPERLESS_GPT_PORT:-8080}:8080" for LAN access.
+      - "127.0.0.1:${PAPERLESS_GPT_PORT:-8080}:8080"
+    networks:
+      - paperless-gpt-network
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q -O /dev/null http://localhost:8080/ || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 30s
+    # SERVER: Uncomment and tune resource limits before deploying to production
+    # deploy:
+    #   resources:
+    #     limits:
+    #       cpus: '1.0'
+    #       memory: 512M
+    #     reservations:
+    #       cpus: '0.25'
+    #       memory: 128M
+
+volumes:
+  paperless-gpt_data:
+    driver: local
+    # SERVER: Bind mount alternative:
+    # driver_opts:
+    #   type: none
+    #   o: bind
+    #   device: /data/paperless-gpt/db
+  paperless-gpt_config:
+    driver: local
+    # SERVER: Bind mount alternative:
+    # driver_opts:
+    #   type: none
+    #   o: bind
+    #   device: /data/paperless-gpt/config
+  paperless-gpt_prompts:
+    driver: local
+    # SERVER: Bind mount alternative:
+    # driver_opts:
+    #   type: none
+    #   o: bind
+    #   device: /data/paperless-gpt/prompts
+
+networks:
+  paperless-gpt-network:
+    driver: bridge
