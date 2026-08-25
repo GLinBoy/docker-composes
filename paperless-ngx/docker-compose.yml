@@ -1,51 +1,145 @@
-version: "3.8"
+name: paperless-ngx
 
 services:
   broker:
-    image: docker.io/library/redis:7
+    image: ${PAPERLESS_REDIS_IMAGE:-redis:latest}
     container_name: paperless-redis
-    restart: unless-stopped
+    # SERVER: Uncomment to ensure the broker starts automatically on boot or failure
+    # restart: unless-stopped
     volumes:
-      - redisdata:/data
+      - paperless_redisdata:/data
+      # SERVER: Prefer a bind mount for easier backup control:
+      # - /data/paperless-ngx/redis:/data
+    networks:
+      - paperless-ngx-network
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 30s
+    # SERVER: Uncomment and tune resource limits before deploying to production
+    # deploy:
+    #   resources:
+    #     limits:
+    #       cpus: '0.5'
+    #       memory: 128M
+    #     reservations:
+    #       cpus: '0.1'
+    #       memory: 64M
 
   db:
-    image: docker.io/library/postgres:16
+    image: ${PAPERLESS_POSTGRES_IMAGE:-postgres:16.15-alpine}
     container_name: paperless-db
-    restart: unless-stopped
-    volumes:
-      - pgdata:/var/lib/postgresql/data
+    # SERVER: Uncomment to ensure the database starts automatically on boot or failure
+    # restart: unless-stopped
     environment:
-      POSTGRES_DB: paperless
-      POSTGRES_USER: paperless
-      POSTGRES_PASSWORD: paperless
+      POSTGRES_DB: ${POSTGRES_DB:-paperless}
+      POSTGRES_USER: ${POSTGRES_USER:-paperless}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    volumes:
+      - paperless_pgdata:/var/lib/postgresql/data
+      # SERVER: Prefer a bind mount for easier backup control:
+      # - /data/paperless-ngx/postgres:/var/lib/postgresql/data
+    networks:
+      - paperless-ngx-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 30s
+    # SERVER: Uncomment and tune resource limits before deploying to production
+    # deploy:
+    #   resources:
+    #     limits:
+    #       cpus: '1.0'
+    #       memory: 512M
+    #     reservations:
+    #       cpus: '0.25'
+    #       memory: 256M
 
   webserver:
-    image: paperlessngx/paperless-ngx:3.0.5
+    image: ${PAPERLESS_NGX_IMAGE:-paperlessngx/paperless-ngx:latest}
     container_name: paperless-ngx
-    restart: unless-stopped
+    # SERVER: Uncomment to ensure paperless-ngx starts automatically on boot or failure
+    # restart: unless-stopped
     depends_on:
-      - db
-      - broker
-    ports:
-      - "8000:8000"
+      db:
+        condition: service_healthy
+      broker:
+        condition: service_healthy
+    environment:
+      USERMAP_UID: ${USERMAP_UID:-1000}
+      USERMAP_GID: ${USERMAP_GID:-1000}
+      PAPERLESS_REDIS: redis://broker:6379
+      PAPERLESS_DBENGINE: postgresql
+      PAPERLESS_DBHOST: db
+      PAPERLESS_DBNAME: ${POSTGRES_DB:-paperless}
+      PAPERLESS_DBUSER: ${POSTGRES_USER:-paperless}
+      PAPERLESS_DBPASS: ${POSTGRES_PASSWORD}
+      PAPERLESS_SECRET_KEY: ${PAPERLESS_SECRET_KEY}
+      PAPERLESS_URL: ${PAPERLESS_URL:-http://localhost:8000}
+      PAPERLESS_TIME_ZONE: ${PAPERLESS_TIME_ZONE:-UTC}
+      PAPERLESS_OCR_LANGUAGE: ${PAPERLESS_OCR_LANGUAGE:-eng}
     volumes:
-      - data:/usr/src/paperless/data
-      - media:/usr/src/paperless/media
+      - paperless_data:/usr/src/paperless/data
+      - paperless_media:/usr/src/paperless/media
       - ./export:/usr/src/paperless/export
       - ./consume:/usr/src/paperless/consume
-    environment:
-      PAPERLESS_REDIS: redis://broker:6379
-      PAPERLESS_DBHOST: db
-      PAPERLESS_DBNAME: paperless
-      PAPERLESS_DBUSER: paperless
-      PAPERLESS_DBPASS: paperless
-      PAPERLESS_SECRET_KEY: change-me-to-a-random-secret-key
-      PAPERLESS_URL: http://localhost:8000
-      PAPERLESS_TIME_ZONE: UTC
-      PAPERLESS_OCR_LANGUAGE: eng
+      # SERVER: Prefer bind mounts for the data/media volumes for easier backup control:
+      # - /data/paperless-ngx/data:/usr/src/paperless/data
+      # - /data/paperless-ngx/media:/usr/src/paperless/media
+    ports:
+      - "${PAPERLESS_NGX_PORT:-8000}:8000"
+    networks:
+      - paperless-ngx-network
+    healthcheck:
+      test: ["CMD-SHELL", "curl -sf http://localhost:8000 || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 60s
+    # SERVER: Uncomment and tune resource limits before deploying to production
+    # deploy:
+    #   resources:
+    #     limits:
+    #       cpus: '2.0'
+    #       memory: 2G
+    #     reservations:
+    #       cpus: '0.5'
+    #       memory: 512M
 
 volumes:
-  data:
-  media:
-  pgdata:
-  redisdata:
+  paperless_data:
+    driver: local
+    # SERVER: Bind mount alternative:
+    # driver_opts:
+    #   type: none
+    #   o: bind
+    #   device: /data/paperless-ngx/data
+  paperless_media:
+    driver: local
+    # SERVER: Bind mount alternative:
+    # driver_opts:
+    #   type: none
+    #   o: bind
+    #   device: /data/paperless-ngx/media
+  paperless_pgdata:
+    driver: local
+    # SERVER: Bind mount alternative:
+    # driver_opts:
+    #   type: none
+    #   o: bind
+    #   device: /data/paperless-ngx/postgres
+  paperless_redisdata:
+    driver: local
+    # SERVER: Bind mount alternative:
+    # driver_opts:
+    #   type: none
+    #   o: bind
+    #   device: /data/paperless-ngx/redis
+
+networks:
+  paperless-ngx-network:
+    driver: bridge
