@@ -2,12 +2,14 @@ name: ollama
 
 services:
   ollama:
-    image: ollama/ollama:0.32.9
+    image: ${OLLAMA_IMAGE:-ollama/ollama:latest}
     container_name: ollama
     volumes:
-      - ./ollama:/root/.ollama
+      - ollama_data:/root/.ollama
     ports:
-      - "11434:11434"
+      # LOCAL: bound to 127.0.0.1 only. SERVER: keep behind a reverse proxy or
+      # expose deliberately (change to "${OLLAMA_PORT:-11434}:11434").
+      - "127.0.0.1:${OLLAMA_PORT:-11434}:11434"
     networks:
       - ollama-network
     healthcheck:
@@ -16,40 +18,51 @@ services:
       timeout: 10s
       retries: 5
       start_period: 40s
-    # SERVER: Uncomment and tune for NVIDIA GPU support before deploying:
+    # SERVER: Uncomment and tune resource limits before deploying to production.
+    # For NVIDIA GPU acceleration, install the NVIDIA Container Toolkit
+    # (https://docs.nvidia.com/datacenter/cloud-native/container-toolkit/) and
+    # uncomment the devices block.
     # deploy:
     #   resources:
+    #     limits:
+    #       cpus: '2.0'
+    #       memory: 8G
     #     reservations:
+    #       cpus: '0.5'
+    #       memory: 2G
     #       devices:
     #         - driver: nvidia
     #           count: 1
-    #           capabilities:
-    #             - gpu
+    #           capabilities: [gpu]
 
   open-webui:
-    image: ghcr.io/open-webui/open-webui:v0.9.6
+    image: ${OPEN_WEBUI_IMAGE:-ghcr.io/open-webui/open-webui:latest}
     container_name: open-webui
     depends_on:
       ollama:
-        condition: service_started
+        condition: service_healthy
     environment:
-      - OLLAMA_API_BASE_URL=http://ollama:11434/api
+      OLLAMA_API_BASE_URL: ${OLLAMA_API_BASE_URL:-http://ollama:11434/api}
+      WEBUI_SECRET_KEY: ${WEBUI_SECRET_KEY:-}
+      TZ: ${TZ:-UTC}
     volumes:
-      - ./open_webui:/app/backend/data
+      - open_webui_data:/app/backend/data
     ports:
-      - "3000:8080"
+      # LOCAL: bound to 127.0.0.1 only. SERVER: keep behind a reverse proxy or
+      # expose deliberately (change to "${OPEN_WEBUI_PORT:-3000}:8080").
+      - "127.0.0.1:${OPEN_WEBUI_PORT:-3000}:8080"
     networks:
       - ollama-network
+    # LOCAL: Enables host.docker.internal resolution on Docker Desktop (Mac/Windows)
+    extra_hosts:
+      - host.docker.internal:host-gateway
     healthcheck:
       test: ["CMD-SHELL", "curl -sf http://localhost:8080/health || exit 1"]
       interval: 30s
       timeout: 10s
       retries: 5
       start_period: 60s
-    # LOCAL: Enables host.docker.internal resolution on Docker Desktop (Mac/Windows)
-    extra_hosts:
-      - host.docker.internal:host-gateway
-    # SERVER: Uncomment and tune resource limits before deploying to production:
+    # SERVER: Uncomment and tune resource limits before deploying to production
     # deploy:
     #   resources:
     #     limits:
@@ -58,6 +71,22 @@ services:
     #     reservations:
     #       cpus: '0.5'
     #       memory: 1G
+
+volumes:
+  ollama_data:
+    driver: local
+    # SERVER: Use a bind mount for easier backup control:
+    # driver_opts:
+    #   type: none
+    #   o: bind
+    #   device: /data/ollama
+  open_webui_data:
+    driver: local
+    # SERVER: Use a bind mount for easier backup control:
+    # driver_opts:
+    #   type: none
+    #   o: bind
+    #   device: /data/open-webui
 
 networks:
   ollama-network:

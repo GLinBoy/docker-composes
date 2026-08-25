@@ -1,2 +1,4 @@
+# Local data directories from the previous bind-mount layout. Keep them ignored
+# so any leftover models/data (including SSH keys) are never committed.
 ollama/
 open_webui/
