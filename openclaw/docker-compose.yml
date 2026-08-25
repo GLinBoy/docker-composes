@@ -4,9 +4,8 @@ services:
   openclaw-gateway:
     image: ${OPENCLAW_IMAGE:-ghcr.io/openclaw/openclaw:latest}
     container_name: openclaw-gateway
-    restart: unless-stopped
+    # init: true runs tini as PID 1 so signals and zombie reaping work correctly
     init: true
-    depends_on: []
     env_file:
       - path: .env
         required: false
@@ -29,48 +28,46 @@ services:
       OTEL_SERVICE_NAME: ${OTEL_SERVICE_NAME:-}
       TZ: ${OPENCLAW_TZ:-UTC}
     volumes:
-      - ${OPENCLAW_CONFIG_DIR:-${HOME:-/tmp}/.openclaw}:/home/node/.openclaw
-      - ${OPENCLAW_WORKSPACE_DIR:-${HOME:-/tmp}/.openclaw/workspace}:/home/node/.openclaw/workspace
-      - ${OPENCLAW_AUTH_PROFILE_SECRET_DIR:-${HOME:-/tmp}/.openclaw-auth-profile-secrets}:/home/node/.config/openclaw
+      - openclaw_config:/home/node/.openclaw
+      - openclaw_workspace:/home/node/.openclaw/workspace
+      - openclaw_auth_secrets:/home/node/.config/openclaw
       # SERVER: Uncomment for sandbox isolation (requires Docker CLI in image)
       # - /var/run/docker.sock:/var/run/docker.sock
     ports:
-      - "${OPENCLAW_GATEWAY_PORT:-18789}:18789"
-      - "${OPENCLAW_BRIDGE_PORT:-18790}:18790"
-      - "${OPENCLAW_MSTEAMS_PORT:-3978}:3978"
+      # LOCAL: bound to 127.0.0.1 only. SERVER: keep behind a reverse proxy or
+      # expose deliberately (change to "0.0.0.0:${OPENCLAW_GATEWAY_PORT:-18789}:18789"
+      # for LAN access).
+      - "127.0.0.1:${OPENCLAW_GATEWAY_PORT:-18789}:18789"
+      - "127.0.0.1:${OPENCLAW_BRIDGE_PORT:-18790}:18790"
+      - "127.0.0.1:${OPENCLAW_MSTEAMS_PORT:-3978}:3978"
     networks:
       - openclaw-network
+    # Allows the container to reach host services via host.docker.internal
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     cap_drop:
       - NET_RAW
       - NET_ADMIN
     security_opt:
       - no-new-privileges:true
-    extra_hosts:
-      - "host.docker.internal:host-gateway"
     command:
-      [
-        "node",
-        "dist/index.js",
-        "gateway",
-        "--bind",
-        "${OPENCLAW_GATEWAY_BIND:-lan}",
-        "--port",
-        "18789",
-      ]
+      - node
+      - dist/index.js
+      - gateway
+      - --bind
+      - ${OPENCLAW_GATEWAY_BIND:-lan}
+      - --port
+      - "18789"
     healthcheck:
       test:
-        [
-          "CMD",
-          "node",
-          "-e",
-          "fetch('http://127.0.0.1:18789/healthz').then((r)=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))",
-        ]
+        - CMD
+        - node
+        - -e
+        - "fetch('http://127.0.0.1:18789/healthz').then((r)=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"
       interval: 30s
       timeout: 5s
       retries: 5
       start_period: 20s
-    labels:
-      - "com.docker.compose.service=openclaw-gateway"
     # SERVER: Uncomment and tune resource limits before deploying to production
     # deploy:
     #   resources:
@@ -88,7 +85,8 @@ services:
     image: ${OPENCLAW_IMAGE:-ghcr.io/openclaw/openclaw:latest}
     container_name: openclaw-cli
     depends_on:
-      - openclaw-gateway
+      openclaw-gateway:
+        condition: service_healthy
     network_mode: "service:openclaw-gateway"
     env_file:
       - path: .env
@@ -106,9 +104,9 @@ services:
       BROWSER: echo
       TZ: ${OPENCLAW_TZ:-UTC}
     volumes:
-      - ${OPENCLAW_CONFIG_DIR:-${HOME:-/tmp}/.openclaw}:/home/node/.openclaw
-      - ${OPENCLAW_WORKSPACE_DIR:-${HOME:-/tmp}/.openclaw/workspace}:/home/node/.openclaw/workspace
-      - ${OPENCLAW_AUTH_PROFILE_SECRET_DIR:-${HOME:-/tmp}/.openclaw-auth-profile-secrets}:/home/node/.config/openclaw
+      - openclaw_config:/home/node/.openclaw
+      - openclaw_workspace:/home/node/.openclaw/workspace
+      - openclaw_auth_secrets:/home/node/.config/openclaw
     stdin_open: true
     tty: true
     init: true
@@ -118,6 +116,17 @@ services:
     security_opt:
       - no-new-privileges:true
     entrypoint: ["node", "dist/index.js"]
+    healthcheck:
+      # Shares the gateway's network namespace — healthy once the gateway is reachable
+      test:
+        - CMD
+        - node
+        - -e
+        - "fetch('http://127.0.0.1:18789/healthz').then((r)=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"
+      interval: 30s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
     # SERVER: Uncomment and tune resource limits before deploying to production
     # deploy:
     #   resources:
@@ -127,6 +136,29 @@ services:
     #     reservations:
     #       cpus: '0.25'
     #       memory: 128M
+
+volumes:
+  openclaw_config:
+    driver: local
+    # SERVER: Use a bind mount for easier config editing and backup:
+    # driver_opts:
+    #   type: none
+    #   o: bind
+    #   device: /data/openclaw/config
+  openclaw_workspace:
+    driver: local
+    # SERVER: Use a bind mount for easier backup control:
+    # driver_opts:
+    #   type: none
+    #   o: bind
+    #   device: /data/openclaw/workspace
+  openclaw_auth_secrets:
+    driver: local
+    # SERVER: Use a bind mount for easier backup control:
+    # driver_opts:
+    #   type: none
+    #   o: bind
+    #   device: /data/openclaw/auth-secrets
 
 networks:
   openclaw-network:
