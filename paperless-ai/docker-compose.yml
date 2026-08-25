@@ -1,21 +1,53 @@
+name: paperless-ai
+
 services:
   paperless-ai:
-    image: clusterzx/paperless-ai:3.0.9
+    image: ${PAPERLESS_AI_IMAGE:-clusterzx/paperless-ai:latest}
     container_name: paperless-ai
-    network_mode: bridge
-    restart: unless-stopped
+    # SERVER: Uncomment to ensure Paperless-AI starts automatically on boot or failure
+    # restart: unless-stopped
+    environment:
+      TZ: ${PAPERLESS_AI_TZ:-UTC}
+      PAPERLESS_AI_PORT: "3000"
+      RAG_SERVICE_URL: ${PAPERLESS_AI_RAG_SERVICE_URL:-http://localhost:8000}
+      RAG_SERVICE_ENABLED: ${PAPERLESS_AI_RAG_SERVICE_ENABLED:-true}
+    volumes:
+      - paperless-ai_data:/app/data
+      # SERVER: Prefer a bind mount for easier backup control:
+      # - /data/paperless-ai:/app/data
+    ports:
+      - "${PAPERLESS_AI_PORT:-3000}:3000"
+    networks:
+      - paperless-ai-network
     cap_drop:
       - ALL
     security_opt:
       - no-new-privileges=true
-    environment:
-      - PUID=1000
-      - PGID=1000
-      - TZ=Europe/Berlin
-    volumes:
-      - paperless-ai_data:/app/data
-    ports:
-      - 3000:3000
+    healthcheck:
+      test: ["CMD-SHELL", "curl -sf http://localhost:3000/health || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 30s
+    # SERVER: Uncomment and tune resource limits before deploying to production
+    # deploy:
+    #   resources:
+    #     limits:
+    #       cpus: '1.0'
+    #       memory: 1G
+    #     reservations:
+    #       cpus: '0.25'
+    #       memory: 256M
 
 volumes:
   paperless-ai_data:
+    driver: local
+    # SERVER: Bind mount alternative:
+    # driver_opts:
+    #   type: none
+    #   o: bind
+    #   device: /data/paperless-ai
+
+networks:
+  paperless-ai-network:
+    driver: bridge
