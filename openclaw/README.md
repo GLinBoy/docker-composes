@@ -1,16 +1,17 @@
 # OpenClaw
 
-[OpenClaw](https://openclaw.ai) is a personal AI assistant you run on your own devices. It connects to multiple messaging platforms and provides a unified interface for AI interactions.
+[OpenClaw](https://openclaw.ai/) is a personal AI assistant you run on your own devices. It
+connects to multiple messaging platforms and provides a unified interface for AI interactions.
+
+This stack runs the official
+[`ghcr.io/openclaw/openclaw` image](https://github.com/openclaw/openclaw) as two services on a
+private network: `openclaw-gateway` (the HTTP gateway that hosts the Control UI and connects to
+channels) and `openclaw-cli` (an interactive CLI that shares the gateway's network namespace for
+management commands).
 
 ## Quick Start
 
-### 1. Create Required Directories
-
-```bash
-mkdir -p config workspace auth-secrets
-```
-
-### 2. Configure Environment
+### 1. Configure Environment
 
 ```bash
 cp .env.example .env
@@ -18,50 +19,58 @@ cp .env.example .env
 
 Edit `.env` and set at minimum:
 
-- `OPENCLAW_GATEWAY_TOKEN` - Generate with `openssl rand -hex 32`
-- At least one model provider API key (e.g., `OPENAI_API_KEY`, `ANTHROPIC_API_KEY`)
+- `OPENCLAW_GATEWAY_TOKEN` — generate with `openssl rand -hex 32`
+- At least one model provider API key (e.g. `OPENAI_API_KEY`, `ANTHROPIC_API_KEY`)
 
-### 3. Create Initial Configuration
-
-Create `config/openclaw.json`:
-
-```json
-{
-  "agent": {
-    "model": "openai/gpt-4o"
-  }
-}
-```
-
-### 4. Start OpenClaw
+### 2. Start OpenClaw
 
 ```bash
 docker compose up -d
 ```
 
-### 5. Verify OpenClaw is Running
+### 3. Verify OpenClaw is Running
 
 ```bash
 docker compose ps
 ```
 
-All services should show as "healthy".
+Both services should show as "healthy".
 
-### 6. Test the Gateway
+### 4. Configure OpenClaw
+
+The gateway generates a default config on first start. Run the setup wizard to choose a model
+provider and set options:
 
 ```bash
-# Check health endpoint
-curl http://localhost:18789/healthz
-
-# View logs
-docker compose logs -f openclaw-gateway
+docker compose exec openclaw-cli node dist/index.js configure
 ```
 
-### 7. Stop OpenClaw
+Or edit `openclaw.json` directly (it lives in the `openclaw_config` volume):
+
+```bash
+docker compose exec openclaw-gateway sh
+vi /home/node/.openclaw/openclaw.json
+```
+
+Reload the gateway after changing the config:
+
+```bash
+docker compose exec openclaw-gateway node dist/index.js gateway reload
+```
+
+### 5. Access the Control UI
+
+Open `http://localhost:18789` in your browser.
+
+### 6. Stop OpenClaw
 
 ```bash
 docker compose down
 ```
+
+> Containers stop when the host restarts (no restart policy is set, per repository
+> convention). To have OpenClaw start automatically, add `restart: unless-stopped` to each
+> service.
 
 ## Configuration
 
@@ -69,129 +78,106 @@ docker compose down
 
 | Variable | Required | Description |
 |----------|----------|-------------|
+| `OPENCLAW_IMAGE` | ❌ | Image tag (default `ghcr.io/openclaw/openclaw:latest` when unset) |
 | `OPENCLAW_GATEWAY_TOKEN` | ✅ | Authentication token for gateway access |
-| `OPENAI_API_KEY` | ⚠️ | OpenAI API key (or other provider) |
-| `ANTHROPIC_API_KEY` | ⚠️ | Anthropic API key (alternative) |
-| `GEMINI_API_KEY` | ⚠️ | Google Gemini API key (alternative) |
-| `OPENCLAW_TZ` | ❌ | Timezone (default: UTC) |
+| `OPENCLAW_GATEWAY_BIND` | ❌ | Gateway bind address inside the container (`lan` or `localhost`, default `lan`) |
+| `OPENCLAW_GATEWAY_PORT` | ❌ | Host port for the gateway (default `18789`) |
+| `OPENCLAW_BRIDGE_PORT` | ❌ | Host port for the bridge service (default `18790`) |
+| `OPENCLAW_MSTEAMS_PORT` | ❌ | Host port for Microsoft Teams (default `3978`) |
+| `OPENCLAW_TZ` | ❌ | Timezone (default `UTC`) |
+| `OPENAI_API_KEY` / `ANTHROPIC_API_KEY` / `GEMINI_API_KEY` / `OPENROUTER_API_KEY` | ⚠️ | Model provider keys — set at least one |
+| `DOCKER_GID` | ❌ | Host docker group GID for sandbox support (SERVER only) |
+
+All other options (channels, voice/media tools, OpenTelemetry, advanced flags) are passed
+straight through from `.env` to the containers — see `.env.example` for the full list.
 
 ### Volumes
 
 | Volume | Purpose |
 |--------|---------|
-| `config` | OpenClaw configuration (`openclaw.json`) |
-| `workspace` | Agent workspace, skills, and tools |
-| `auth-secrets` | Authentication profile encryption keys |
+| `openclaw_config` | OpenClaw configuration (`openclaw.json`) and state |
+| `openclaw_workspace` | Agent workspace, skills, and tools |
+| `openclaw_auth_secrets` | Authentication profile encryption keys |
 
 ### Ports
 
 | Port | Purpose |
 |------|---------|
-| 18789 | Gateway API |
+| 18789 | Gateway API and Control UI |
 | 18790 | Bridge service |
 | 3978 | Microsoft Teams channel (optional) |
 
+All ports are bound to `127.0.0.1` only by default. See the server checklist below before
+exposing them publicly.
+
+## Updating
+
+1. Check the [OpenClaw releases](https://github.com/openclaw/openclaw/releases) page.
+2. Bump `OPENCLAW_IMAGE` in `.env` to the next tag (e.g. `2026.7.1-2`).
+3. Pull and recreate the containers:
+
+```bash
+docker compose pull
+docker compose up -d
+```
+
+## Migrating Existing Data
+
+If you previously ran this stack with the host directories `~/.openclaw` and
+`~/.openclaw-auth-profile-secrets` mounted in, copy the data into the named volumes once:
+
+```bash
+docker compose up -d  # ensure the volumes exist
+
+docker run --rm -v openclaw_openclaw_config:/target -v "$HOME/.openclaw":/src \
+  alpine sh -c "cp -a /src/. /target/"
+
+docker run --rm -v openclaw_openclaw_auth_secrets:/target \
+  -v "$HOME/.openclaw-auth-profile-secrets":/src \
+  alpine sh -c "cp -a /src/. /target/"
+```
+
+Then restart and verify:
+
+```bash
+docker compose restart
+docker compose exec openclaw-cli node dist/index.js gateway status
+```
+
+## Server Checklist
+
+Before deploying to a production server:
+
+- [ ] Set a strong `OPENCLAW_GATEWAY_TOKEN` (`openssl rand -hex 32`)
+- [ ] Add `restart: unless-stopped` to every service if you want auto-start after reboots
+- [ ] Uncomment and tune the `deploy.resources` block on each service
+- [ ] Keep the gateway behind a reverse proxy (e.g. [Caddy](../caddy/), [Nginx](../nginx/),
+      [Traefik](../traefik/)) with TLS instead of exposing ports directly
+- [ ] Use bind mounts for `openclaw_config`, `openclaw_workspace`, and `openclaw_auth_secrets`
+      for easier backups (see the `# SERVER:` comments in the volumes section)
+- [ ] For sandbox isolation, mount the Docker socket, uncomment `group_add`, and set
+      `DOCKER_GID` (`stat -c '%g' /var/run/docker.sock`)
+- [ ] Back up the `openclaw_config`, `openclaw_workspace`, and `openclaw_auth_secrets` volumes —
+      they hold all config, state, and credentials
+- [ ] Read the upstream [Security Guide](https://docs.openclaw.ai/gateway/security)
+
 ## Supported Channels
 
-OpenClaw supports multiple messaging platforms:
-
-- WhatsApp
-- Telegram
-- Slack
-- Discord
-- Google Chat
-- Signal
-- iMessage
-- IRC
-- Microsoft Teams
-- Matrix
-- Feishu
-- LINE
-- Mattermost
-- Nextcloud Talk
-- Nostr
-- Synology Chat
-- Tlon
-- Twitch
-- Zalo
-- WeChat
-- QQ
-- WebChat
-
-Configure channel tokens in `.env` and enable them in `openclaw.json`.
-
-## Production Considerations
-
-### Before Deploying to Production:
-
-1. **Generate Strong Gateway Token**
-   
-   Never use auto-generated tokens in production:
-   
-   ```bash
-   openssl rand -hex 32
-   ```
-
-2. **Secure API Keys**
-   
-   Store all model provider API keys in `.env` (never commit to git).
-
-3. **Resource Limits**
-   
-   Uncomment and tune the `deploy.resources` blocks in `docker-compose.yml`:
-   
-   ```yaml
-   deploy:
-     resources:
-       limits:
-         cpus: '2.0'
-         memory: 2G
-   ```
-
-4. **Bind Mounts for Data**
-   
-   Consider using bind mounts instead of named volumes for easier backup:
-   
-   ```yaml
-   volumes:
-     - /data/openclaw/config:/home/node/.openclaw
-     - /data/openclaw/workspace:/home/node/.openclaw/workspace
-     - /data/openclaw/auth-secrets:/home/node/.config/openclaw
-   ```
-
-5. **Sandbox Isolation**
-   
-   For production with multiple users/channels, enable Docker sandbox:
-   
-   - Uncomment the Docker socket mount
-   - Uncomment `group_add` with your Docker GID
-   - Set `DOCKER_GID` in `.env`: `stat -c '%g' /var/run/docker.sock`
-
-6. **Network Security**
-   
-   - Default gateway binds to LAN; use `--bind localhost` for local-only
-   - For remote access, configure firewall rules for exposed ports
-   - Consider using a reverse proxy (Caddy, Nginx) with TLS
-
-7. **Timezone Configuration**
-   
-   Set `OPENCLAW_TZ` to your server's timezone for correct scheduling.
-
-8. **Backup Configuration**
-   
-   Regularly backup the `config`, `workspace`, and `auth-secrets` volumes.
+OpenClaw supports many messaging platforms: WhatsApp, Telegram, Slack, Discord, Google Chat,
+Signal, iMessage, IRC, Microsoft Teams, Matrix, Feishu, LINE, Mattermost, Nextcloud Talk,
+Nostr, Synology Chat, Tlon, Twitch, Zalo, WeChat, QQ, and WebChat. Configure channel tokens in
+`.env` and enable them in `openclaw.json`.
 
 ## Troubleshooting
 
 ### Gateway won't start
 
-Check the logs:
 ```bash
 docker compose logs openclaw-gateway
 ```
 
 Common issues:
-- Missing `OPENCLAW_GATEWAY_TOKEN` (if binding beyond localhost)
+- Missing `OPENCLAW_GATEWAY_TOKEN` (when binding beyond localhost)
 - Invalid `openclaw.json` syntax
 - Port conflicts (check if ports 18789, 18790 are already in use)
 
@@ -199,7 +185,7 @@ Common issues:
 
 - Verify API keys are correct in `.env`
 - Check provider status/outages
-- Ensure network connectivity from container
+- Ensure network connectivity from the container
 
 ### Channel connection issues
 
@@ -209,9 +195,9 @@ Common issues:
 
 ### Sandbox issues
 
-- Ensure Docker socket is accessible
-- Verify `DOCKER_GID` matches host's docker group
-- Check container has `docker` command available
+- Ensure the Docker socket is accessible
+- Verify `DOCKER_GID` matches the host's docker group
+- Check the container has the `docker` command available
 
 ## Useful Commands
 
@@ -225,30 +211,20 @@ docker compose logs -f openclaw-gateway
 # Restart gateway
 docker compose restart openclaw-gateway
 
-# Access CLI inside container
-docker compose exec openclaw-cli node dist/index.js gateway status
-
-# Rebuild configuration
-docker compose exec openclaw-gateway node dist/index.js gateway reload
-
-# Clean restart (loses all data)
-docker compose down -v
-docker compose up -d
-```
-
-## OpenClaw CLI
-
-The CLI service shares the gateway's network namespace and can be used for management:
-
-```bash
-# Check gateway status
+# Gateway status
 docker compose exec openclaw-cli node dist/index.js gateway status
 
 # List active sessions
 docker compose exec openclaw-cli node dist/index.js sessions list
 
+# Reload configuration
+docker compose exec openclaw-gateway node dist/index.js gateway reload
+
 # Send a test message
 docker compose exec openclaw-cli node dist/index.js message send --target <target> --message "Hello"
+
+# Health check
+curl -sf http://localhost:18789/healthz
 ```
 
 ## Resources
@@ -259,4 +235,3 @@ docker compose exec openclaw-cli node dist/index.js message send --target <targe
 - [Channel Setup](https://docs.openclaw.ai/channels)
 - [Security Guide](https://docs.openclaw.ai/gateway/security)
 - [GitHub Repository](https://github.com/openclaw/openclaw)
-- [Discord Community](https://discord.gg/clawd)
