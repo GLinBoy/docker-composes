@@ -1,22 +1,64 @@
-version: "3.8"
+name: pi-hole
+
 services:
   pihole:
+    image: ${PIHOLE_IMAGE:-pihole/pihole:latest}
     container_name: pihole
-    image: pihole/pihole:2026.07.2
-    # For DHCP it is recommended to remove these ports and instead add: network_mode: "host"
-    ports:
-      - "53:53/tcp"
-      - "53:53/udp"
-      - "67:67/udp"
-      - "80:80/tcp"
+    # SERVER: Uncomment to ensure Pi-hole starts automatically on boot or failure
+    # restart: unless-stopped
     environment:
-      TZ: "America/Chicago"
-      # WEBPASSWORD: 'set a secure password here or it will be random'
-    # Volumes store your data between container upgrades
+      TZ: ${PIHOLE_TZ:-UTC}
+      # Pi-hole v6 web interface password — leaving this empty DISABLES web auth
+      FTLCONF_webserver_api_password: ${PIHOLE_WEBPASSWORD}
+      # Bridge network — listen on all interfaces so DNS queries from other hosts are answered
+      FTLCONF_dns_listeningMode: ALL
     volumes:
-      - "./etc-pihole:/etc/pihole"
-      - "./etc-dnsmasq.d:/etc/dnsmasq.d"
-    #   https://github.com/pi-hole/docker-pi-hole#note-on-capabilities
+      - pihole_etc:/etc/pihole
+      - pihole_dnsmasq:/etc/dnsmasq.d
+    ports:
+      - "${PIHOLE_DNS_PORT:-53}:53/tcp"
+      - "${PIHOLE_DNS_PORT:-53}:53/udp"
+      - "${PIHOLE_WEB_PORT:-80}:80/tcp"
+      # DHCP server (optional — requires NET_ADMIN; runs best with host networking)
+      # - "${PIHOLE_DHCP_PORT:-67}:67/udp"
+    # Recommended for DHCP; see https://docs.pi-hole.net/docker/#note-on-capabilities
     cap_add:
       - NET_ADMIN
-    restart: unless-stopped # Recommended but not required (DHCP needs NET_ADMIN)
+    networks:
+      - pi-hole-network
+    healthcheck:
+      # Same probe as the image's built-in healthcheck — verifies FTL resolves pi.hole on the DNS port
+      test: ["CMD-SHELL", "dig -p $(pihole-FTL --config dns.port) +short +norecurse +retry=0 @127.0.0.1 pi.hole || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 30s
+    # SERVER: Uncomment and tune resource limits before deploying to production
+    # deploy:
+    #   resources:
+    #     limits:
+    #       cpus: '1.0'
+    #       memory: 512M
+    #     reservations:
+    #       cpus: '0.25'
+    #       memory: 128M
+
+volumes:
+  pihole_etc:
+    driver: local
+    # SERVER: Bind mount alternative:
+    # driver_opts:
+    #   type: none
+    #   o: bind
+    #   device: /data/pihole/etc
+  pihole_dnsmasq:
+    driver: local
+    # SERVER: Bind mount alternative:
+    # driver_opts:
+    #   type: none
+    #   o: bind
+    #   device: /data/pihole/dnsmasq
+
+networks:
+  pi-hole-network:
+    driver: bridge
