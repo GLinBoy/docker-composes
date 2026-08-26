@@ -1,11 +1,49 @@
-version: "3.8"
+name: postgresql
+
 services:
-  PostgreSQL14:
-    container_name: PostgreSQL
-    image: postgres:18.4-alpine3.23 # use latest official postgres version
-    env_file:
-      - database.env # configure postgres
+  postgresql:
+    image: ${POSTGRES_IMAGE:-postgres:latest}
+    container_name: postgresql
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      # SERVER: set a strong password before exposing beyond localhost
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB:-postgres}
+      TZ: ${POSTGRES_TZ:-UTC}
     volumes:
-      - ./data:/var/lib/postgresql/data/ # persist data even if container shuts downvolumes:
+      - postgresql_data:/var/lib/postgresql/data
+      # SERVER: Prefer a bind mount for easier backup control:
+      # - /data/postgresql:/var/lib/postgresql/data
     ports:
-      - 5432:5432
+      - "${POSTGRES_PORT:-5432}:5432"
+    networks:
+      - postgresql-network
+    healthcheck:
+      # pg_isready reports ready as soon as the server can accept connections
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 30s
+    # SERVER: Uncomment and tune resource limits before deploying to production
+    # deploy:
+    #   resources:
+    #     limits:
+    #       cpus: '1.0'
+    #       memory: 1G
+    #     reservations:
+    #       cpus: '0.25'
+    #       memory: 256M
+
+volumes:
+  postgresql_data:
+    driver: local
+    # SERVER: Bind mount alternative:
+    # driver_opts:
+    #   type: none
+    #   o: bind
+    #   device: /data/postgresql
+
+networks:
+  postgresql-network:
+    driver: bridge
