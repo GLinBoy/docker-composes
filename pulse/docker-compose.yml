@@ -1,35 +1,49 @@
-version: "3.8"
+name: pulse
 
 services:
   pulse:
-    image: rcourtman/pulse:6.2.1
+    image: ${PULSE_IMAGE:-rcourtman/pulse:latest}
     container_name: pulse
-    restart: unless-stopped
+    # SERVER: Uncomment to ensure Pulse starts automatically on boot or failure
+    # restart: unless-stopped
+    environment:
+      TZ: ${PULSE_TZ:-UTC}
+      # Marks this deployment as Docker Compose (used for update/notification tracking)
+      PULSE_DEPLOYMENT_METHOD: docker_compose
+    volumes:
+      - pulse_data:/data
+      # SERVER: Prefer a bind mount for easier backup control:
+      # - /data/pulse:/data
     ports:
       - "${PULSE_PORT:-7655}:7655"
-    volumes:
-      - pulse-data:/data
-      # Temperature monitoring:
-      # - Recommended (v5): install pulse-agent on each Proxmox host with --enable-proxmox.
-      # - Deprecated: pulse-sensor-proxy (host-side proxy). If you already use it, mount the socket read-only.
-      # - /run/pulse-sensor-proxy:/run/pulse-sensor-proxy:ro
-    environment:
-      - TZ=${TZ:-UTC}
+    networks:
+      - pulse-network
     healthcheck:
-      test:
-        [
-          "CMD",
-          "wget",
-          "--quiet",
-          "--tries=1",
-          "--spider",
-          "http://localhost:7655/api/health",
-        ]
+      # The image ships wget (no curl); /api/health is unauthenticated
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:7655/api/health"]
       interval: 30s
       timeout: 10s
-      retries: 3
-      start_period: 10s
+      retries: 5
+      start_period: 30s
+    # SERVER: Uncomment and tune resource limits before deploying to production
+    # deploy:
+    #   resources:
+    #     limits:
+    #       cpus: '1.0'
+    #       memory: 512M
+    #     reservations:
+    #       cpus: '0.25'
+    #       memory: 128M
 
 volumes:
-  pulse-data:
+  pulse_data:
     driver: local
+    # SERVER: Bind mount alternative:
+    # driver_opts:
+    #   type: none
+    #   o: bind
+    #   device: /data/pulse
+
+networks:
+  pulse-network:
+    driver: bridge
