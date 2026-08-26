@@ -1,16 +1,52 @@
-version: "3"
+name: portainer
 
 services:
   portainer:
-    image: portainer/portainer-ce:2.43.0-alpine
+    image: ${PORTAINER_IMAGE:-portainer/portainer-ce:latest}
     container_name: portainer
+    # Manage the local Docker engine via its unix socket (the default when unset)
     command: -H unix:///var/run/docker.sock
-    restart: always
-    ports:
-      - 9000:9000
+    # SERVER: Uncomment to ensure Portainer starts automatically on boot or failure
+    # restart: always
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
-      - data:/data
+      - portainer_data:/data
+      # SERVER: Prefer a bind mount for easier backup control:
+      # - /data/portainer:/data
+    ports:
+      - "${PORTAINER_PORT:-9000}:9000"
+      # HTTPS web UI with an auto-generated self-signed certificate (optional)
+      # - "${PORTAINER_HTTPS_PORT:-9443}:9443"
+      # Edge compute / agent tunnel (optional — remove if you don't use Edge agents)
+      # - "${PORTAINER_EDGE_PORT:-8000}:8000"
+    networks:
+      - portainer-network
+    healthcheck:
+      # The image ships wget (no curl); /api/status is unauthenticated
+      test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://localhost:9000/api/status"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 30s
+    # SERVER: Uncomment and tune resource limits before deploying to production
+    # deploy:
+    #   resources:
+    #     limits:
+    #       cpus: '1.0'
+    #       memory: 512M
+    #     reservations:
+    #       cpus: '0.25'
+    #       memory: 128M
 
 volumes:
-  data:
+  portainer_data:
+    driver: local
+    # SERVER: Bind mount alternative:
+    # driver_opts:
+    #   type: none
+    #   o: bind
+    #   device: /data/portainer
+
+networks:
+  portainer-network:
+    driver: bridge
