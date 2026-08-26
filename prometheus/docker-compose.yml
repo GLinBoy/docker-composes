@@ -1,12 +1,46 @@
-version: "3.3"
+name: prometheus
 
 services:
   prometheus:
-    image: prom/prometheus:v3.13.2
+    image: ${PROMETHEUS_IMAGE:-prom/prometheus:latest}
     container_name: prometheus
-    ports:
-      - "9090:9090"
     command:
       - --config.file=/etc/prometheus/prometheus.yml
     volumes:
       - ./prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus_data:/prometheus
+      # SERVER: Prefer a bind mount for the data dir:
+      # - /data/prometheus:/prometheus
+    ports:
+      - "${PROMETHEUS_PORT:-9090}:9090"
+    networks:
+      - prometheus-network
+    healthcheck:
+      # The image ships wget (no curl); /-/healthy is unauthenticated
+      test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://localhost:9090/-/healthy"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 30s
+    # SERVER: Uncomment and tune resource limits before deploying to production
+    # deploy:
+    #   resources:
+    #     limits:
+    #       cpus: '1.0'
+    #       memory: 1G
+    #     reservations:
+    #       cpus: '0.25'
+    #       memory: 256M
+
+volumes:
+  prometheus_data:
+    driver: local
+    # SERVER: Bind mount alternative:
+    # driver_opts:
+    #   type: none
+    #   o: bind
+    #   device: /data/prometheus
+
+networks:
+  prometheus-network:
+    driver: bridge
