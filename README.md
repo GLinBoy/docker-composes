@@ -79,7 +79,6 @@ On this repository, I will share my docker composes. Feel free to use, edit, and
 - [RabbitMQ](rabbitmq/) ([website](https://www.rabbitmq.com/))
 - [Redis](redis/) ([website](https://redis.io/))
 - [Rocket Chat](rocket-chat/) ([website](https://www.rocket.chat/))
-- [ScyllaDB](scylladb/) ([website](https://www.scylladb.com/))
 - [SmokePing](smokeping/) ([website](https://oss.oetiker.ch/smokeping/))
 - [SonarQube](sonarqube/) ([website](https://www.sonarsource.com/products/sonarqube/))
 - [Sonatype Nexus](sonatype-nexus/) ([website](https://www.sonatype.com/products/sonatype-nexus-repository))
