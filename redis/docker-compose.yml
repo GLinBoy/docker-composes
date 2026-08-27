@@ -1,8 +1,43 @@
-version: "3.8"
+name: redis
 
 services:
   redis:
-    image: redis:8.10.0-alpine3.23
+    image: ${REDIS_IMAGE:-redis:latest}
+    container_name: redis
+    command: redis-server --loglevel warning ${REDIS_PASSWORD:+--requirepass $REDIS_PASSWORD}
+    environment:
+      TZ: ${TZ:-UTC}
+    volumes:
+      - redis_data:/data
     ports:
-      - 6379:6379
-    command: redis-server --loglevel warning
+      - "${REDIS_PORT:-6379}:6379"
+    networks:
+      - redis-network
+    healthcheck:
+      test: ["CMD-SHELL", "redis-cli ${REDIS_PASSWORD:+--pass $REDIS_PASSWORD} ping | grep -q PONG || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 30s
+    # SERVER: Uncomment and tune resource limits before deploying to production
+    # deploy:
+    #   resources:
+    #     limits:
+    #       cpus: '1.0'
+    #       memory: 512M
+    #     reservations:
+    #       cpus: '0.25'
+    #       memory: 256M
+
+volumes:
+  redis_data:
+    driver: local
+    # SERVER: Use a bind mount for easier backup control:
+    # driver_opts:
+    #   type: none
+    #   o: bind
+    #   device: /data/redis
+
+networks:
+  redis-network:
+    driver: bridge
