@@ -1,46 +1,155 @@
-volumes:
-  mongodb_data: { driver: local }
+name: rocket-chat
 
 services:
   rocketchat:
-    image: ${IMAGE:-registry.rocket.chat/rocketchat/rocket.chat}:${RELEASE:-latest}
-    restart: always
+    image: ${ROCKETCHAT_IMAGE:-registry.rocket.chat/rocketchat/rocket.chat:latest}
+    container_name: rocketchat
+    depends_on:
+      mongodb-init:
+        condition: service_completed_successfully
+    environment:
+      ROOT_URL: ${ROOT_URL:-http://localhost:${ROCKETCHAT_PORT:-3000}}
+      PORT: ${PORT:-3000}
+      DEPLOY_METHOD: docker
+      DEPLOY_PLATFORM: compose
+      REG_TOKEN: ${REG_TOKEN:-}
+      MONGO_URL: ${MONGO_URL:-mongodb://mongodb:27017/rocketchat?replicaSet=${MONGODB_REPLICA_SET_NAME:-rs0}}
+    ports:
+      - "${BIND_IP:-0.0.0.0}:${ROCKETCHAT_PORT:-3000}:${PORT:-3000}"
+    networks:
+      - rocket-chat-network
+    healthcheck:
+      # /api/info returns 200 once the application is up and connected
+      test: ["CMD", "node", "-e", "fetch('http://localhost:${PORT:-3000}/api/info').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 60s
     labels:
+      # Traefik labels — only active if Rocket.Chat shares a network with a Traefik instance
       traefik.enable: "true"
-      traefik.http.routers.rocketchat.rule: Host(`${DOMAIN:-}`)
+      traefik.http.routers.rocketchat.rule: "Host(`${ROCKETCHAT_DOMAIN:-}`)"
       traefik.http.routers.rocketchat.tls: "true"
       traefik.http.routers.rocketchat.entrypoints: https
       traefik.http.routers.rocketchat.tls.certresolver: le
+    # SERVER: Uncomment and tune resource limits before deploying to production
+    # deploy:
+    #   resources:
+    #     limits:
+    #       cpus: '2.0'
+    #       memory: 2G
+    #     reservations:
+    #       cpus: '0.5'
+    #       memory: 1G
+
+  mongodb-permissions:
+    # One-shot container that fixes /data/db ownership for the non-root mongodb user
+    image: ${MONGODB_IMAGE:-mongodb/mongodb-community-server:latest}
+    container_name: mongodb-permissions
+    user: "0"
+    volumes:
+      - mongodb_data:/data/db
     environment:
-      MONGO_URL: "${MONGO_URL:-\
-        mongodb://${MONGODB_ADVERTISED_HOSTNAME:-mongodb}:${MONGODB_INITIAL_PRIMARY_PORT_NUMBER:-27017}/\
-        ${MONGODB_DATABASE:-rocketchat}?replicaSet=${MONGODB_REPLICA_SET_NAME:-rs0}}"
-      MONGO_OPLOG_URL: "${MONGO_OPLOG_URL:\
-        -mongodb://${MONGODB_ADVERTISED_HOSTNAME:-mongodb}:${MONGODB_INITIAL_PRIMARY_PORT_NUMBER:-27017}/\
-        local?replicaSet=${MONGODB_REPLICA_SET_NAME:-rs0}}"
-      ROOT_URL: ${ROOT_URL:-http://localhost:${HOST_PORT:-3000}}
-      PORT: ${PORT:-3000}
-      DEPLOY_METHOD: docker
-      DEPLOY_PLATFORM: ${DEPLOY_PLATFORM:-}
-      REG_TOKEN: ${REG_TOKEN:-}
+      MONGODB_USER_ID: ${MONGODB_USER_ID:-1001}
+    entrypoint:
+      - sh
+      - -xc
+      - |
+        owner="$$(stat -c %u /data/db)"
+        if [ "$$owner" != "$$MONGODB_USER_ID" ]; then
+          echo "Fixing /data/db ownership to UID $$MONGODB_USER_ID"
+          chown -R "$$MONGODB_USER_ID" /data/db
+        else
+          echo "/data/db ownership OK"
+        fi
+    networks:
+      - rocket-chat-network
+    # one-shot container — no healthcheck, exits after fixing ownership
+    # SERVER: Uncomment and tune resource limits before deploying to production
+    # deploy:
+    #   resources:
+    #     limits:
+    #       cpus: '0.5'
+    #       memory: 256M
+
+  mongodb-init:
+    # One-shot container that initiates the MongoDB replica set required by Rocket.Chat
+    image: ${MONGODB_IMAGE:-mongodb/mongodb-community-server:latest}
+    container_name: mongodb-init
     depends_on:
-      - mongodb
-    expose:
-      - ${PORT:-3000}
-    ports:
-      - "${BIND_IP:-0.0.0.0}:${HOST_PORT:-3000}:${PORT:-3000}"
+      mongodb:
+        condition: service_healthy
+    user: "0"
+    volumes:
+      - mongodb_data:/data/db
+    environment:
+      MONGODB_REPLICA_SET_NAME: ${MONGODB_REPLICA_SET_NAME:-rs0}
+      MONGODB_PORT_NUMBER: "27017"
+      MONGODB_ADVERTISED_HOSTNAME: ${MONGODB_ADVERTISED_HOSTNAME:-mongodb}
+    entrypoint:
+      - sh
+      - -xc
+      - |
+        echo "Waiting for MongoDB to accept connections..."
+        until mongosh "mongodb://$${MONGODB_ADVERTISED_HOSTNAME}:$${MONGODB_PORT_NUMBER}/?directConnection=true" --eval "db.adminCommand('ping')" >/dev/null 2>&1; do
+          sleep 5
+        done
+        echo "Initiating replica set $${MONGODB_REPLICA_SET_NAME}..."
+        mongosh "mongodb://$${MONGODB_ADVERTISED_HOSTNAME}:$${MONGODB_PORT_NUMBER}/?directConnection=true" --eval "rs.initiate({_id: '$${MONGODB_REPLICA_SET_NAME}', members: [{ _id: 0, host: '$${MONGODB_ADVERTISED_HOSTNAME}:$${MONGODB_PORT_NUMBER}' }]})"
+        echo "Replica set initiation complete."
+    networks:
+      - rocket-chat-network
+    # one-shot container — no healthcheck, exits after initiating the replica set
+    # SERVER: Uncomment and tune resource limits before deploying to production
+    # deploy:
+    #   resources:
+    #     limits:
+    #       cpus: '0.5'
+    #       memory: 256M
 
   mongodb:
-    image: docker.io/bitnami/mongodb:${MONGODB_VERSION:-6.0}
-    restart: always
+    image: ${MONGODB_IMAGE:-mongodb/mongodb-community-server:latest}
+    container_name: mongodb
+    user: "${MONGODB_USER_ID:-1001}"
+    depends_on:
+      mongodb-permissions:
+        condition: service_completed_successfully
+    entrypoint:
+      - mongod
+      - --replSet
+      - ${MONGODB_REPLICA_SET_NAME:-rs0}
+      - --bind_ip_all
     volumes:
-      - mongodb_data:/bitnami/mongodb
-    environment:
-      MONGODB_REPLICA_SET_MODE: primary
-      MONGODB_REPLICA_SET_NAME: ${MONGODB_REPLICA_SET_NAME:-rs0}
-      MONGODB_PORT_NUMBER: ${MONGODB_PORT_NUMBER:-27017}
-      MONGODB_INITIAL_PRIMARY_HOST: ${MONGODB_INITIAL_PRIMARY_HOST:-mongodb}
-      MONGODB_INITIAL_PRIMARY_PORT_NUMBER: ${MONGODB_INITIAL_PRIMARY_PORT_NUMBER:-27017}
-      MONGODB_ADVERTISED_HOSTNAME: ${MONGODB_ADVERTISED_HOSTNAME:-mongodb}
-      MONGODB_ENABLE_JOURNAL: ${MONGODB_ENABLE_JOURNAL:-true}
-      ALLOW_EMPTY_PASSWORD: ${ALLOW_EMPTY_PASSWORD:-yes}
+      - mongodb_data:/data/db
+    ports:
+      - "127.0.0.1:${MONGODB_PORT:-27017}:27017"
+    networks:
+      - rocket-chat-network
+    healthcheck:
+      test: ["CMD-SHELL", "mongosh --eval 'db.runCommand({ ping: 1 })' --quiet"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 30s
+    # SERVER: Uncomment and tune resource limits before deploying to production
+    # deploy:
+    #   resources:
+    #     limits:
+    #       cpus: '1.0'
+    #       memory: 1G
+    #     reservations:
+    #       cpus: '0.25'
+    #       memory: 256M
+
+volumes:
+  mongodb_data:
+    driver: local
+    # SERVER: Use a bind mount for easier backup control:
+    # driver_opts:
+    #   type: none
+    #   o: bind
+    #   device: /data/rocket-chat/mongodb
+
+networks:
+  rocket-chat-network:
+    driver: bridge
