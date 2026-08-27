@@ -1,26 +1,49 @@
-version: "3"
+name: rabbitmq
 
 services:
   rabbitmq:
-    image: rabbitmq:4.3.4-management-alpine
-    container_name: rabbitmq_management
-
-    ports:
-      - 25672:25672 # (erlang) communication between the nodes and CLI tool
-      - 15672:15672 # communication with the web management API
-
-    volumes:
-      # data persistence
-      - /docker_conf/rabbitmq/data/:/var/lib/rabbitmq/
-    # data mapping -> host: container
-    # queues and messages data of the container will be stored on the host
+    image: ${RABBITMQ_IMAGE:-rabbitmq:latest}
+    container_name: rabbitmq
     environment:
-      - RABBITMQ_DEFAULT_USER=admin
-      - RABBITMQ_DEFAULT_PASS=passw123
-
-    restart: always
+      RABBITMQ_DEFAULT_USER: ${RABBITMQ_DEFAULT_USER:-admin}
+      # SERVER: set a strong password before exposing beyond localhost
+      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_DEFAULT_PASS}
+      TZ: ${TZ:-UTC}
+    volumes:
+      - rabbitmq_data:/var/lib/rabbitmq
+      # SERVER: Prefer a bind mount for easier backup control:
+      # - /data/rabbitmq:/var/lib/rabbitmq
+    ports:
+      - "${RABBITMQ_AMQP_PORT:-5672}:5672"
+      - "${RABBITMQ_MANAGEMENT_PORT:-15672}:15672"
+      - "${RABBITMQ_ERLANG_PORT:-25672}:25672"
+    networks:
+      - rabbitmq-network
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "ping"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 30s
+    # SERVER: Uncomment and tune resource limits before deploying to production
+    # deploy:
+    #   resources:
+    #     limits:
+    #       cpus: '1.0'
+    #       memory: 1G
+    #     reservations:
+    #       cpus: '0.25'
+    #       memory: 256M
 
 volumes:
-  logs-folder:
-    name: ${log_rabbitmq_management}
+  rabbitmq_data:
     driver: local
+    # SERVER: Bind mount alternative:
+    # driver_opts:
+    #   type: none
+    #   o: bind
+    #   device: /data/rabbitmq
+
+networks:
+  rabbitmq-network:
+    driver: bridge
