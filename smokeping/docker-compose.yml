@@ -1,13 +1,52 @@
-version: "3"
 name: smokeping
+
 services:
   smokeping:
-    image: linuxserver/smokeping:2.9.0
+    image: ${SMOKEPING_IMAGE:-linuxserver/smokeping:latest}
     container_name: smokeping
     environment:
-      - PUID=1000
-      - PGID=1000
-      - TZ=Etc/UTC
+      PUID: ${PUID:-1000}
+      PGID: ${PGID:-1000}
+      TZ: ${TZ:-UTC}
+    volumes:
+      - smokeping_config:/config
+      - smokeping_data:/data
     ports:
-      - 19090:80
-    restart: unless-stopped
+      - "${SMOKEPING_PORT:-19090}:80"
+    networks:
+      - smokeping-network
+    healthcheck:
+      test: ["CMD-SHELL", "curl -sf http://localhost/smokeping/ || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 30s
+    # SERVER: Uncomment and tune resource limits before deploying to production
+    # deploy:
+    #   resources:
+    #     limits:
+    #       cpus: '1.0'
+    #       memory: 512M
+    #     reservations:
+    #       cpus: '0.25'
+    #       memory: 256M
+
+volumes:
+  smokeping_config:
+    driver: local
+    # SERVER: Use a bind mount for easier backup control:
+    # driver_opts:
+    #   type: none
+    #   o: bind
+    #   device: /data/smokeping/config
+  smokeping_data:
+    driver: local
+    # SERVER: Use a bind mount for easier backup control:
+    # driver_opts:
+    #   type: none
+    #   o: bind
+    #   device: /data/smokeping/data
+
+networks:
+  smokeping-network:
+    driver: bridge
