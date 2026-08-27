@@ -1,17 +1,55 @@
+name: qbittorrent
+
 services:
   qbittorrent:
-    image: linuxserver/qbittorrent:5.2.3
+    image: ${QBITTORRENT_IMAGE:-linuxserver/qbittorrent:latest}
     container_name: qbittorrent
     environment:
-      - PUID=1000
-      - PGID=1000
-      - TZ=Europe/Berlin
-      - WEBUI_PORT=8080
+      PUID: ${PUID:-1000}
+      PGID: ${PGID:-1000}
+      TZ: ${TZ:-UTC}
+      WEBUI_PORT: ${WEBUI_PORT:-8080}
     volumes:
-      - ./config:/config
-      - ./downloads:/downloads
+      - qbittorrent_config:/config
+      - qbittorrent_downloads:/downloads
     ports:
-      - 8080:8080
-      - 6881:6881
-      - 6881:6881/udp
-    restart: unless-stopped
+      - "${QBITTORRENT_WEBUI_PORT:-8080}:${WEBUI_PORT:-8080}"
+      - "${QBITTORRENT_BT_PORT:-6881}:6881"
+      - "${QBITTORRENT_BT_PORT:-6881}:6881/udp"
+    networks:
+      - qbittorrent-network
+    healthcheck:
+      test: ["CMD-SHELL", "curl -sf http://localhost:$${WEBUI_PORT}/ || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 30s
+    # SERVER: Uncomment and tune resource limits before deploying to production
+    # deploy:
+    #   resources:
+    #     limits:
+    #       cpus: '1.0'
+    #       memory: 1G
+    #     reservations:
+    #       cpus: '0.25'
+    #       memory: 256M
+
+volumes:
+  qbittorrent_config:
+    driver: local
+    # SERVER: Use a bind mount for easier backup control:
+    # driver_opts:
+    #   type: none
+    #   o: bind
+    #   device: /data/qbittorrent/config
+  qbittorrent_downloads:
+    driver: local
+    # SERVER: Use a bind mount for easier backup control:
+    # driver_opts:
+    #   type: none
+    #   o: bind
+    #   device: /data/qbittorrent/downloads
+
+networks:
+  qbittorrent-network:
+    driver: bridge
