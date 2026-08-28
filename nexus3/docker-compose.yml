@@ -1,0 +1,48 @@
+name: nexus3
+
+services:
+  nexus:
+    image: ${NEXUS_IMAGE:-sonatype/nexus3:latest}
+    container_name: nexus3
+    # SERVER: Uncomment to ensure Nexus starts automatically on boot or failure
+    # restart: unless-stopped
+    environment:
+      - TZ=${NEXUS_TZ:-UTC}
+    volumes:
+      - nexus_data:/nexus-data
+    ports:
+      - "${NEXUS_HTTP_PORT:-8081}:8081"
+      # SERVER: Only expose the Docker registry port if you create a Docker hosted
+      # repository; remove it otherwise to reduce the attack surface
+      - "${NEXUS_DOCKER_PORT:-8085}:8085"
+    networks:
+      - nexus3-network
+    healthcheck:
+      # The v1 status endpoint returns 200 only once the server is fully up
+      test: ["CMD-SHELL", "curl -sf http://localhost:8081/service/rest/v1/status || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 90s
+    # SERVER: Uncomment and tune resource limits before deploying to production
+    # deploy:
+    #   resources:
+    #     limits:
+    #       cpus: '2.0'
+    #       memory: 2G
+    #     reservations:
+    #       cpus: '0.5'
+    #       memory: 512M
+
+volumes:
+  nexus_data:
+    driver: local
+    # SERVER: Use a bind mount for easier backup control:
+    # driver_opts:
+    #   type: none
+    #   o: bind
+    #   device: /data/nexus3
+
+networks:
+  nexus3-network:
+    driver: bridge
