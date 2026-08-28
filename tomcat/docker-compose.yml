@@ -1,17 +1,42 @@
-version: "3.8"
 name: tomcat
+
 services:
   tomcat:
+    image: tomcat:${TOMCAT_VERSION:-latest}
     container_name: tomcat
-    image: tomcat:11.0.24-jre25
-    ports:
-      - "8080:8080"
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8080"]
-      start_period: 30s
-      interval: 1m
-      timeout: 1s
-      retries: 3
+    # SERVER: Uncomment to start Tomcat automatically on boot or failure
+    # restart: unless-stopped
+    environment:
+      - TZ=${TOMCAT_TZ:-UTC}
     volumes:
+      # Drop WAR files here — Tomcat auto-deploys whatever is in webapps
+      # (the bind mount hides the image's default apps: ROOT, docs, examples, manager)
       - ./data/webapps:/usr/local/tomcat/webapps
+      # Container logs (catalina.out, localhost, manager logs, ...)
       - ./data/logs:/usr/local/tomcat/logs
+    ports:
+      - "${TOMCAT_PORT:-8080}:8080"
+    networks:
+      - tomcat-network
+    # The image ships no curl/wget (Ubuntu noble base), so probe the HTTP
+    # connector with bash's /dev/tcp instead — works even with no webapp
+    # deployed (a 404 still answers with an HTTP/1.1 status line).
+    healthcheck:
+      test: ["CMD-SHELL", "bash -c 'exec 3<>/dev/tcp/127.0.0.1/8080; printf \"GET / HTTP/1.1\\r\\nHost: localhost\\r\\nConnection: close\\r\\n\\r\\n\" >&3; grep -q \"^HTTP/1.1\" <&3; exec 3>&-'"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 30s
+    # SERVER: Uncomment and tune before deploying to production
+    # deploy:
+    #   resources:
+    #     limits:
+    #       cpus: '2.0'
+    #       memory: 1G
+    #     reservations:
+    #       cpus: '0.5'
+    #       memory: 512M
+
+networks:
+  tomcat-network:
+    driver: bridge
