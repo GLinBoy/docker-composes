@@ -1,32 +1,110 @@
-version: "3"
+name: sonarqube
 
 services:
   sonarqube:
-    image: sonarqube:26.8.0.126808-community
+    image: sonarqube:${SONARQUBE_VERSION:-latest}
+    container_name: sonarqube
+    # SERVER: Uncomment to ensure SonarQube starts automatically on boot or failure
+    # restart: unless-stopped
     depends_on:
-      - db
+      db:
+        condition: service_healthy
     environment:
-      SONAR_JDBC_URL: jdbc:postgresql://db:5432/sonar
-      SONAR_JDBC_USERNAME: sonar
-      SONAR_JDBC_PASSWORD: sonar
+      - SONAR_JDBC_URL=jdbc:postgresql://db:5432/${SONAR_DB_NAME:-sonar}
+      - SONAR_JDBC_USERNAME=${SONAR_DB_USER:-sonar}
+      - SONAR_JDBC_PASSWORD=${SONAR_DB_PASSWORD}
     volumes:
       - sonarqube_data:/opt/sonarqube/data
       - sonarqube_extensions:/opt/sonarqube/extensions
       - sonarqube_logs:/opt/sonarqube/logs
+      - sonarqube_temp:/opt/sonarqube/temp
     ports:
-      - "9001:9000"
+      - "${SONARQUBE_PORT:-9001}:9000"
+    networks:
+      - sonarqube-network
+    healthcheck:
+      # The web API responds as soon as the server accepts HTTP; startup is slow on first boot
+      test: ["CMD-SHELL", "curl -sf http://localhost:9000/api/system/status || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 120s
+    # SERVER: Uncomment and tune resource limits before deploying to production
+    # deploy:
+    #   resources:
+    #     limits:
+    #       cpus: '2.0'
+    #       memory: 2G
+    #     reservations:
+    #       cpus: '0.5'
+    #       memory: 512M
+
   db:
-    image: postgres:16.2-alpine3.19
+    image: ${POSTGRES_IMAGE:-postgres:latest}
+    container_name: sonarqube-db
     environment:
-      POSTGRES_USER: sonar
-      POSTGRES_PASSWORD: sonar
+      - POSTGRES_USER=${SONAR_DB_USER:-sonar}
+      - POSTGRES_PASSWORD=${SONAR_DB_PASSWORD}
+      - POSTGRES_DB=${SONAR_DB_NAME:-sonar}
     volumes:
-      - postgresql:/var/lib/postgresql
       - postgresql_data:/var/lib/postgresql/data
+      # SERVER: Prefer a bind mount for easier backup control:
+      # - /data/sonarqube/postgres:/var/lib/postgresql/data
+    networks:
+      - sonarqube-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 30s
+    # SERVER: Uncomment and tune resource limits before deploying to production
+    # deploy:
+    #   resources:
+    #     limits:
+    #       cpus: '1.0'
+    #       memory: 1G
+    #     reservations:
+    #       cpus: '0.25'
+    #       memory: 256M
 
 volumes:
   sonarqube_data:
+    driver: local
+    # SERVER: Use a bind mount for easier backup control:
+    # driver_opts:
+    #   type: none
+    #   o: bind
+    #   device: /data/sonarqube/data
   sonarqube_extensions:
+    driver: local
+    # SERVER: Use a bind mount for easier backup control:
+    # driver_opts:
+    #   type: none
+    #   o: bind
+    #   device: /data/sonarqube/extensions
   sonarqube_logs:
-  postgresql:
+    driver: local
+    # SERVER: Use a bind mount for easier backup control:
+    # driver_opts:
+    #   type: none
+    #   o: bind
+    #   device: /data/sonarqube/logs
+  sonarqube_temp:
+    driver: local
+    # SERVER: Use a bind mount for easier backup control:
+    # driver_opts:
+    #   type: none
+    #   o: bind
+    #   device: /data/sonarqube/temp
   postgresql_data:
+    driver: local
+    # SERVER: Use a bind mount for easier backup control:
+    # driver_opts:
+    #   type: none
+    #   o: bind
+    #   device: /data/sonarqube/postgres
+
+networks:
+  sonarqube-network:
+    driver: bridge
