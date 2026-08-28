@@ -1,27 +1,85 @@
+name: stirling-pdf
+
 services:
   stirling-pdf:
-    image: stirlingtools/stirling-pdf:2.14.3
+    image: ${STIRLING_PDF_IMAGE:-stirlingtools/stirling-pdf:latest}
     container_name: stirling-pdf
-    ports:
-      - "8080:8080"
-    volumes:
-      - ./stirling-data/tessdata:/usr/share/tessdata
-      - ./stirling-data/configs:/configs
-      - ./stirling-data/logs:/logs
-      - ./stirling-data/customFiles:/customFiles:rw
-      - ./stirling-data/pipeline:/pipeline
+    # SERVER: Uncomment to ensure Stirling PDF starts automatically on boot or failure
+    # restart: unless-stopped
     environment:
-      - SECURITY_ENABLELOGIN=true
-      - LANGS=en_GB
-      - SYSTEM_DEFAULTLOCALE=en-GB
-      - SYSTEM_GOOGLEVISIBILITY=false
-      - SYSTEM_MAXFILESIZE=2000
-    restart: unless-stopped
-    deploy:
-      resources:
-        limits:
-          memory: 4G
-          cpus: "2.0"
-        reservations:
-          memory: 2G
-          cpus: "1.0"
+      # SERVER: Keep login enabled when exposed beyond localhost; the first
+      # account created on the login page becomes the admin
+      - SECURITY_ENABLELOGIN=${SECURITY_ENABLELOGIN:-true}
+      - LANGS=${LANGS:-en_GB}
+      - SYSTEM_DEFAULTLOCALE=${SYSTEM_DEFAULTLOCALE:-en-GB}
+      # SERVER: Set to false when exposed publicly to avoid being indexed by search engines
+      - SYSTEM_GOOGLEVISIBILITY=${SYSTEM_GOOGLEVISIBILITY:-false}
+      # Max upload size in MB (0 = unlimited)
+      - SYSTEM_MAXFILESIZE=${SYSTEM_MAXFILESIZE:-2000}
+    volumes:
+      - tessdata:/usr/share/tessdata
+      - configs:/configs
+      - logs:/logs
+      - custom_files:/customFiles
+      - pipeline:/pipeline
+    ports:
+      - "${STIRLING_PDF_PORT:-8080}:8080"
+    networks:
+      - stirling-pdf-network
+    healthcheck:
+      # The status API returns 200 once the app is up
+      test: ["CMD-SHELL", "curl -sf http://localhost:8080/api/v1/info/status || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 60s
+    # SERVER: Uncomment and tune resource limits before deploying to production
+    # deploy:
+    #   resources:
+    #     limits:
+    #       cpus: '2.0'
+    #       memory: 4G
+    #     reservations:
+    #       cpus: '1.0'
+    #       memory: 2G
+
+volumes:
+  tessdata:
+    driver: local
+    # SERVER: Use a bind mount for easier backup control:
+    # driver_opts:
+    #   type: none
+    #   o: bind
+    #   device: /data/stirling-pdf/tessdata
+  configs:
+    driver: local
+    # SERVER: Use a bind mount for easier backup control:
+    # driver_opts:
+    #   type: none
+    #   o: bind
+    #   device: /data/stirling-pdf/configs
+  logs:
+    driver: local
+    # SERVER: Use a bind mount for easier backup control:
+    # driver_opts:
+    #   type: none
+    #   o: bind
+    #   device: /data/stirling-pdf/logs
+  custom_files:
+    driver: local
+    # SERVER: Use a bind mount for easier backup control:
+    # driver_opts:
+    #   type: none
+    #   o: bind
+    #   device: /data/stirling-pdf/customFiles
+  pipeline:
+    driver: local
+    # SERVER: Use a bind mount for easier backup control:
+    # driver_opts:
+    #   type: none
+    #   o: bind
+    #   device: /data/stirling-pdf/pipeline
+
+networks:
+  stirling-pdf-network:
+    driver: bridge
