@@ -1,17 +1,50 @@
 name: vault
+
 services:
-  vault-server:
+  vault:
+    image: hashicorp/vault:${VAULT_VERSION:-latest}
     container_name: vault
-    image: hashicorp/vault:2.0.4
-    ports:
-      - "8200:8200"
+    # SERVER: Uncomment to start Vault automatically on boot or failure
+    # restart: unless-stopped
+    # DEV SERVER: the image defaults to `server -dev` — in-memory storage,
+    # auto-unsealed, NO persistence (all secrets are lost on restart) and a
+    # plain-text root token. Fine for local development only; see README
+    # "Production Considerations" for a real (init/unseal) setup.
+    # SERVER: Dev mode has no authentication beyond the root token — never
+    # expose it beyond localhost on a server.
     environment:
-      VAULT_ADDR: "http://0.0.0.0:8200"
-      VAULT_DEV_ROOT_TOKEN_ID: "vault-plaintext-root-token"
+      # Client address used by the vault CLI inside the container (healthcheck)
+      VAULT_ADDR: http://127.0.0.1:8200
+      # Server bind address inside the container (entrypoint default: 0.0.0.0:8200)
+      VAULT_DEV_LISTEN_ADDRESS: 0.0.0.0:8200
+      # SERVER: plain-text dev root token from .env — local use only.
+      # Leave empty to have Vault generate a random token (printed in logs).
+      VAULT_DEV_ROOT_TOKEN_ID: ${VAULT_DEV_ROOT_TOKEN_ID:-}
+    # IPC_LOCK lets Vault mlock memory (avoids swapping secrets to disk)
     cap_add:
       - IPC_LOCK
+    ports:
+      - "${VAULT_PORT:-8200}:8200"
+    networks:
+      - vault-network
+    # `vault status` exits 0 only when the server is reachable AND unsealed
+    # (exit 1 unreachable, exit 2 sealed) — better than a bare TCP probe
     healthcheck:
-      test: nc -zv 0.0.0.0 8200
-      interval: 1m
-      timeout: 1s
+      test: ["CMD-SHELL", "vault status"]
+      interval: 30s
+      timeout: 10s
       retries: 5
+      start_period: 15s
+    # SERVER: Uncomment and tune before deploying to production
+    # deploy:
+    #   resources:
+    #     limits:
+    #       cpus: '1.0'
+    #       memory: 512M
+    #     reservations:
+    #       cpus: '0.25'
+    #       memory: 128M
+
+networks:
+  vault-network:
+    driver: bridge
