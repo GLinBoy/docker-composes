@@ -1,11 +1,39 @@
-version: "3.8"
+name: uptime-kuma
 
 services:
   uptime-kuma:
-    image: louislam/uptime-kuma:2.5.0
-    restart: unless-stopped
+    image: louislam/uptime-kuma:${UPTIME_KUMA_VERSION:-latest}
+    container_name: uptime-kuma
+    # SERVER: Uncomment to start Uptime Kuma automatically on boot or failure
+    # restart: unless-stopped
+    environment:
+      - TZ=${UPTIME_KUMA_TZ:-UTC}
     volumes:
+      # Persistent app state: SQLite DB, monitors, notifications, uploads
+      # (NFS is NOT supported — local directory or local volume only)
       - ./data:/app/data
     ports:
-      # <Host Port>:<Container Port>
-      - "3001:3001"
+      - "${UPTIME_KUMA_PORT:-3001}:3001"
+    networks:
+      - uptime-kuma-network
+    # Ships with the image: a small Go binary that GETs http://127.0.0.1:3001
+    # and exits 0 on any HTTP response (honours UPTIME_KUMA_HOST / _PORT)
+    healthcheck:
+      test: ["CMD", "extra/healthcheck"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 30s
+    # SERVER: Uncomment and tune before deploying to production
+    # deploy:
+    #   resources:
+    #     limits:
+    #       cpus: '1.0'
+    #       memory: 512M
+    #     reservations:
+    #       cpus: '0.25'
+    #       memory: 256M
+
+networks:
+  uptime-kuma-network:
+    driver: bridge
