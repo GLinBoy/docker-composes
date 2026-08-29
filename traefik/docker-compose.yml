@@ -1,25 +1,76 @@
-version: "3.8"
+name: traefik
 
 services:
   traefik:
-    image: "traefik:3.7.10"
-    container_name: "traefik"
+    image: traefik:${TRAEFIK_VERSION:-latest}
+    container_name: traefik
     command:
-      #- "--log.level=DEBUG"
-      - "--api.insecure=true"
-      - "--providers.docker=true"
-      - "--providers.docker.exposedbydefault=false"
-      - "--entrypoints.web.address=:80"
-    ports:
-      - "80:80"
-      - "8080:8080"
+      # Web entrypoint for HTTP traffic
+      - --entrypoints.web.address=:80
+      # Docker provider: routers are declared with labels on containers,
+      # and only for containers that opt in with traefik.enable=true
+      - --providers.docker=true
+      - --providers.docker.exposedbydefault=false
+      # Ping endpoint for the container healthcheck (served on :8080)
+      - --ping=true
+      # LOCAL: Uncomment for verbose routing logs while debugging
+      #- --log.level=DEBUG
+      # SERVER: api.insecure serves the dashboard & API unauthenticated on :8080 —
+      # for production switch to api.dashboard=true behind an authenticated router
+      # (see "Secure the Dashboard" in README.md)
+      - --api.insecure=true
+    # SERVER: Uncomment to start Traefik automatically on boot or failure
+    # restart: unless-stopped
+    environment:
+      - TZ=${TRAEFIK_TZ:-UTC}
     volumes:
-      - "/var/run/docker.sock:/var/run/docker.sock:ro"
+      # Lets Traefik watch containers and read their routing labels
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    ports:
+      - "${TRAEFIK_HTTP_PORT:-80}:80"
+      - "${TRAEFIK_DASHBOARD_PORT:-8080}:8080"
+    networks:
+      - traefik-network
+    # Official check: sends GET http://:8080/ping to the built-in ping endpoint
+    healthcheck:
+      test: ["CMD", "traefik", "healthcheck", "--ping"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 15s
+    # SERVER: Uncomment and tune before deploying to production
+    # deploy:
+    #   resources:
+    #     limits:
+    #       cpus: '1.0'
+    #       memory: 256M
+    #     reservations:
+    #       cpus: '0.25'
+    #       memory: 128M
 
   whoami:
-    image: "traefik/whoami"
-    container_name: "simple-service"
+    # Demo service proving the routing pipeline works (Host: whoami.localhost)
+    image: traefik/whoami:${WHOAMI_VERSION:-latest}
+    container_name: whoami
+    # SERVER: Uncomment to start the demo service automatically on boot or failure
+    # restart: unless-stopped
+    networks:
+      - traefik-network
+    # No in-container probe possible: the whoami image is built from scratch —
+    # no shell, no curl/wget. Verify the demo via Traefik routing instead (see README).
+    healthcheck:
+      test: ["NONE"]
     labels:
-      - "traefik.enable=true"
-      - "traefik.http.routers.whoami.rule=Host(`whoami.localhost`)"
-      - "traefik.http.routers.whoami.entrypoints=web"
+      - traefik.enable=true
+      - traefik.http.routers.whoami.rule=Host(`whoami.localhost`)
+      - traefik.http.routers.whoami.entrypoints=web
+    # SERVER: Uncomment and tune before deploying to production
+    # deploy:
+    #   resources:
+    #     limits:
+    #       cpus: '0.25'
+    #       memory: 64M
+
+networks:
+  traefik-network:
+    driver: bridge
