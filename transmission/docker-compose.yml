@@ -1,17 +1,53 @@
+name: transmission
+
 services:
   transmission:
-    image: linuxserver/transmission:4.1.3
+    image: linuxserver/transmission:${TRANSMISSION_VERSION:-latest}
     container_name: transmission
+    # SERVER: Uncomment to start Transmission automatically on boot or failure
+    # restart: unless-stopped
     environment:
-      - PUID=1000
-      - PGID=1000
-      - TZ=Europe/Berlin
+      # Run as the host user owning ./config ./downloads ./watch (id -u / id -g)
+      - PUID=${PUID:-1000}
+      - PGID=${PGID:-1000}
+      - TZ=${TRANSMISSION_TZ:-UTC}
+      # SERVER: Set a username/password to protect the Web UI / RPC before
+      # exposing it beyond localhost (generate with: openssl rand -hex 16)
+      # - USER=${TRANSMISSION_USER}
+      # - PASS=${TRANSMISSION_PASSWORD}
     volumes:
+      # Persistent configuration incl. settings.json and torrent state
       - ./config:/config
+      # Completed downloads
       - ./downloads:/downloads
+      # Drop .torrent files here — they are added automatically
       - ./watch:/watch
     ports:
-      - 9091:9091
-      - 51413:51413
-      - 51413:51413/udp
-    restart: unless-stopped
+      - "${TRANSMISSION_RPC_PORT:-9091}:9091"
+      # Peer traffic — keep identical to the port forwarded on your router
+      - "${TRANSMISSION_PEER_PORT:-51413}:51413"
+      - "${TRANSMISSION_PEER_PORT:-51413}:51413/udp"
+    networks:
+      - transmission-network
+    # Any HTTP answer from the RPC endpoint means the daemon is listening.
+    # Without a session id it replies 409 — that is expected, so no curl -f.
+    # LOCAL: curl tries ::1 then 127.0.0.1 (the RPC binds IPv6 by default)
+    healthcheck:
+      test: ["CMD-SHELL", "curl -s -o /dev/null http://localhost:9091/transmission/rpc || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 30s
+    # SERVER: Uncomment and tune before deploying to production
+    # deploy:
+    #   resources:
+    #     limits:
+    #       cpus: '2.0'
+    #       memory: 1G
+    #     reservations:
+    #       cpus: '0.5'
+    #       memory: 256M
+
+networks:
+  transmission-network:
+    driver: bridge
