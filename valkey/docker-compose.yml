@@ -1,26 +1,57 @@
-version: "3.8"
 name: valkey
+
 services:
   valkey:
+    image: ${VALKEY_IMAGE:-valkey/valkey:latest}
+    container_name: valkey
     hostname: valkey
-    image: valkey/valkey:9.1.1-alpine3.24
-    command: valkey-server --save 30 1 --loglevel warning
-    restart: unless-stopped
-    healthcheck:
-      test: "[ $$(valkey-cli ping) = 'PONG' ]"
-      start_period: 5s
-      timeout: 3s
-      interval: 1s
-      retries: 5
+    # SERVER: Uncomment to start Valkey automatically on boot or failure
+    # restart: unless-stopped
+    # Append --requirepass only when VALKEY_PASSWORD is set in .env
+    command: valkey-server --save 30 1 --loglevel warning ${VALKEY_PASSWORD:+--requirepass $VALKEY_PASSWORD}
+    environment:
+      TZ: ${TZ:-UTC}
     volumes:
+      # Persistence (RDB snapshots written to /data by --save 30 1)
       - valkey-data:/data
+    ports:
+      - "${VALKEY_PORT:-6379}:6379"
+    networks:
+      - valkey-network
+    # Password-aware: --pass is appended only when VALKEY_PASSWORD is set in .env
+    healthcheck:
+      test: ["CMD-SHELL", "valkey-cli ${VALKEY_PASSWORD:+--pass $VALKEY_PASSWORD} ping | grep -q PONG || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 30s
+    # Run with minimal privileges — the image entrypoint needs setuid/setgid
+    # to drop privileges to the valkey user (DAC_OVERRIDE for /data ownership)
     cap_drop:
       - ALL
     cap_add:
       - SETGID
       - SETUID
       - DAC_OVERRIDE
+    # SERVER: Uncomment and tune before deploying to production
+    # deploy:
+    #   resources:
+    #     limits:
+    #       cpus: '1.0'
+    #       memory: 512M
+    #     reservations:
+    #       cpus: '0.25'
+    #       memory: 256M
 
 volumes:
   valkey-data:
     driver: local
+    # SERVER: Use a bind mount for easier backup control:
+    # driver_opts:
+    #   type: none
+    #   o: bind
+    #   device: /data/valkey
+
+networks:
+  valkey-network:
+    driver: bridge
