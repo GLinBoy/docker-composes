@@ -1,28 +1,61 @@
-version: "3"
+name: vaultwarden
 
 services:
   vaultwarden:
+    image: vaultwarden/server:${VAULTWARDEN_VERSION:-latest}
     container_name: vaultwarden
-    image: vaultwarden/server:1.37.1
-    restart: unless-stopped
-    volumes:
-      - ./data/:/data/
-    ports:
-      - 8080:80
+    # SERVER: Uncomment to start Vaultwarden automatically on boot or failure
+    # restart: unless-stopped
     environment:
-      - DOMAIN=https://192.168.1.100:8080
+      - TZ=${TZ:-UTC}
+      # Public URL of this instance — must match how browsers reach it (it is
+      # embedded in emails, invites and WebAuthn flows). SERVER: set yours in .env
+      # (Vaultwarden requires a protocol; empty falls back to http://localhost)
+      - DOMAIN=${VAULTWARDEN_DOMAIN:-http://localhost}
+      # SERVER: token for the /admin panel — generate with: openssl rand -hex 32.
+      # Leave empty to disable the admin panel entirely.
+      - ADMIN_TOKEN=${ADMIN_TOKEN:-}
+      # SERVER: false blocks new registrations — flip to true temporarily to onboard
+      - SIGNUPS_ALLOWED=false
+      - SIGNUPS_VERIFY=false
+      - SENDS_ALLOWED=true
+      - EMERGENCY_ACCESS_ALLOWED=true
+      - WEB_VAULT_ENABLED=true
       - LOGIN_RATELIMIT_MAX_BURST=10
       - LOGIN_RATELIMIT_SECONDS=60
       - ADMIN_RATELIMIT_MAX_BURST=10
       - ADMIN_RATELIMIT_SECONDS=60
-      - ADMIN_TOKEN=YourReallyStrongAdminTokenHere
-      - SENDS_ALLOWED=true
-      - EMERGENCY_ACCESS_ALLOWED=true
-      - WEB_VAULT_ENABLED=true
-      - SIGNUPS_ALLOWED=false
-      - SIGNUPS_VERIFY=false
-      - SMTP_HOST=smtp.youremaildomain.com
-      - SMTP_FROM=[email protected]
-      - SMTP_PORT=587
-      - SMTP_USERNAME=[email protected]
-      - SMTP_PASSWORD=YourStrongPasswordHere
+      # SMTP (invites / password-reset mails) — UNCOMMENT these lines to enable
+      # email, then fill the SMTP_* values in .env:
+      # - SMTP_HOST=${SMTP_HOST}
+      # - SMTP_FROM=${SMTP_FROM}
+      # - SMTP_PORT=${SMTP_PORT:-587}
+      # - SMTP_USERNAME=${SMTP_USERNAME}
+      # - SMTP_PASSWORD=${SMTP_PASSWORD}
+    volumes:
+      # SQLite DB, attachments, sends, RSA keys — include this in backups!
+      - ./data:/data
+    ports:
+      - "${VAULTWARDEN_PORT:-8080}:80"
+    networks:
+      - vaultwarden-network
+    # Official image script: probes the unauthenticated /alive endpoint with curl
+    healthcheck:
+      test: ["CMD", "/healthcheck.sh"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 30s
+    # SERVER: Uncomment and tune before deploying to production
+    # deploy:
+    #   resources:
+    #     limits:
+    #       cpus: '1.0'
+    #       memory: 512M
+    #     reservations:
+    #       cpus: '0.25'
+    #       memory: 128M
+
+networks:
+  vaultwarden-network:
+    driver: bridge
