@@ -1,20 +1,86 @@
-version: "3.8"
+name: wordpress
+
 services:
+  db:
+    image: ${MARIADB_IMAGE:-mariadb:latest}
+    container_name: wordpress-mariadb
+    environment:
+      # The official mariadb image creates the DB/user/password from these
+      - MARIADB_DATABASE=${WORDPRESS_DB_NAME:-wordpress}
+      - MARIADB_USER=${WORDPRESS_DB_USER:-wordpress}
+      - MARIADB_PASSWORD=${WORDPRESS_DB_PASSWORD}
+      - MARIADB_ROOT_PASSWORD=${MYSQL_ROOT_PASSWORD}
+    volumes:
+      - db_data:/var/lib/mysql
+    networks:
+      - wordpress-network
+    healthcheck:
+      test: ["CMD", "healthcheck.sh", "--su-mysql", "--connect", "--innodb_initialized"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 30s
+    # SERVER: Uncomment and tune resource limits before deploying to production
+    # deploy:
+    #   resources:
+    #     limits:
+    #       cpus: '1.0'
+    #       memory: 512M
+    #     reservations:
+    #       cpus: '0.25'
+    #       memory: 128M
+
   wordpress:
-    image: wordpress:7.0.4-php8.3-fpm-alpine
-    links:
-      - mariadb:mysql
+    image: ${WORDPRESS_IMAGE:-wordpress:latest}
+    container_name: wordpress
+    depends_on:
+      db:
+        condition: service_healthy
     environment:
-      - WORDPRESS_DB_PASSWORD=password
-      - WORDPRESS_DB_USER=root
+      - TZ=${TZ:-UTC}
+      - WORDPRESS_DB_HOST=db
+      - WORDPRESS_DB_NAME=${WORDPRESS_DB_NAME:-wordpress}
+      - WORDPRESS_DB_USER=${WORDPRESS_DB_USER:-wordpress}
+      - WORDPRESS_DB_PASSWORD=${WORDPRESS_DB_PASSWORD}
+    volumes:
+      - html_data:/var/www/html
     ports:
-      - 80:80
-    volumes:
-      - ./html:/var/www/html
-  mariadb:
-    image: mariadb
-    environment:
-      - MYSQL_ROOT_PASSWORD=password
-      - MYSQL_DATABASE=wordpress
-    volumes:
-      - ./database:/var/lib/mysql
+      - "${WORDPRESS_PORT:-80}:80"
+    networks:
+      - wordpress-network
+    # The image (Apache variant) ships curl — probe the web root
+    healthcheck:
+      test: ["CMD-SHELL", "curl -sf http://localhost/ || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 60s
+    # SERVER: Uncomment and tune resource limits before deploying to production
+    # deploy:
+    #   resources:
+    #     limits:
+    #       cpus: '1.0'
+    #       memory: 512M
+    #     reservations:
+    #       cpus: '0.25'
+    #       memory: 128M
+
+volumes:
+  html_data:
+    driver: local
+    # SERVER: Use a bind mount for easier backup control:
+    # driver_opts:
+    #   type: none
+    #   o: bind
+    #   device: /data/wordpress/html
+  db_data:
+    driver: local
+    # SERVER: Use a bind mount for easier backup control:
+    # driver_opts:
+    #   type: none
+    #   o: bind
+    #   device: /data/wordpress/db
+
+networks:
+  wordpress-network:
+    driver: bridge
