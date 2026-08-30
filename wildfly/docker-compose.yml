@@ -1,12 +1,39 @@
-version: "3.8"
 name: wildfly
+
 services:
   wildfly:
-    image: quay.io/wildfly/wildfly:41.0.0.Final-jdk25
+    image: ${WILDFLY_IMAGE:-quay.io/wildfly/wildfly:latest}
     container_name: wildfly
-    ports:
-      - 8080:8080
-      - 9990:9990
     environment:
-      - WILDFLY_USER=admin
-      - WILDFLY_PASS=admin
+      - TZ=${TZ:-UTC}
+    volumes:
+      # Deployment scanner — drop a .war/.ear here and WildFly auto-deploys it
+      - ./deployments:/opt/jboss/wildfly/standalone/deployments
+    ports:
+      - "${WILDFLY_PORT:-8080}:8080"
+      # SERVER: the management console (9990) is unreachable with the stock image:
+      # no admin user is created and management binds to localhost only. Extend the
+      # image with add-user.sh + `-bmanagement 0.0.0.0` (see README) to enable it.
+      - "${WILDFLY_MANAGEMENT_PORT:-9990}:9990"
+    networks:
+      - wildfly-network
+    # ubi-minimal base ships curl — probe the welcome page on the HTTP port
+    healthcheck:
+      test: ["CMD-SHELL", "curl -sf http://localhost:8080/ || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 60s
+    # SERVER: Uncomment and tune resource limits before deploying to production
+    # deploy:
+    #   resources:
+    #     limits:
+    #       cpus: '2.0'
+    #       memory: 2G
+    #     reservations:
+    #       cpus: '0.5'
+    #       memory: 1G
+
+networks:
+  wildfly-network:
+    driver: bridge
