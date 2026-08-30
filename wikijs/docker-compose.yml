@@ -1,36 +1,80 @@
 name: wikijs
+
 services:
   db:
-    image: postgres:15-alpine
+    image: ${POSTGRES_IMAGE:-postgres:latest}
     container_name: wikijs-db
     environment:
-      POSTGRES_DB: wiki
-      POSTGRES_PASSWORD: wikijsrocks
-      POSTGRES_USER: wikijs
+      # The official postgres image creates the DB/user/password from these
+      - POSTGRES_DB=${WIKIJS_DB_NAME:-wiki}
+      - POSTGRES_USER=${WIKIJS_DB_USER:-wikijs}
+      - POSTGRES_PASSWORD=${WIKIJS_DB_PASSWORD}
     logging:
       driver: none
     volumes:
-      - db-data:/var/lib/postgresql/data
+      - db_data:/var/lib/postgresql/data
+    networks:
+      - wikijs-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 30s
+    # SERVER: Uncomment and tune resource limits before deploying to production
+    # deploy:
+    #   resources:
+    #     limits:
+    #       cpus: '1.0'
+    #       memory: 512M
+    #     reservations:
+    #       cpus: '0.25'
+    #       memory: 128M
 
   wiki:
-    image: ghcr.io/requarks/wiki:2.5
+    image: ${WIKIJS_IMAGE:-ghcr.io/requarks/wiki:latest}
     container_name: wikijs
     depends_on:
-      - db
+      db:
+        condition: service_healthy
     environment:
-      DB_TYPE: postgres
-      DB_HOST: db
-      DB_PORT: 5432
-      DB_USER: wikijs
-      DB_PASS: wikijsrocks
-      DB_NAME: wiki
+      - TZ=${TZ:-UTC}
+      - DB_TYPE=postgres
+      - DB_HOST=db
+      - DB_PORT=5432
+      - DB_USER=${WIKIJS_DB_USER:-wikijs}
+      - DB_PASS=${WIKIJS_DB_PASSWORD}
+      - DB_NAME=${WIKIJS_DB_NAME:-wiki}
     ports:
-      - "3000:3000"
+      - "${WIKIJS_PORT:-3000}:3000"
+    networks:
+      - wikijs-network
+    # The image ships bash + curl (Alpine base) — probe the web UI directly
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:3000"]
-      interval: 1m
-      timeout: 1s
-      retries: 3
+      test: ["CMD-SHELL", "curl -sf http://localhost:3000/ || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 60s
+    # SERVER: Uncomment and tune resource limits before deploying to production
+    # deploy:
+    #   resources:
+    #     limits:
+    #       cpus: '1.0'
+    #       memory: 512M
+    #     reservations:
+    #       cpus: '0.25'
+    #       memory: 256M
 
 volumes:
-  db-data:
+  db_data:
+    driver: local
+    # SERVER: Use a bind mount for easier backup control:
+    # driver_opts:
+    #   type: none
+    #   o: bind
+    #   device: /data/wikijs/db
+
+networks:
+  wikijs-network:
+    driver: bridge
