@@ -19,6 +19,7 @@ On this repository, I will share my docker composes. Feel free to use, edit, and
 - [changedetection.io](changedetection.io/) ([website](https://changedetection.io))
 - [CockroachDB](cockroachdb/) ([website](https://www.cockroachlabs.com/))
 - [CouchDB](couchdb/) ([website](https://couchdb.apache.org/))
+- [Dashy](dashy/) ([website](https://dashy.to/))
 - [DokuWiki](dokuwiki/) ([website](https://www.dokuwiki.org/))
 - [Dozzle](dozzle/) ([website](https://dozzle.dev))
 - [Drupal](drupal/) ([website](https://www.drupal.org/))
