@@ -2,7 +2,7 @@ name: arangodb
 
 services:
   arangodb:
-    image: ${ARANGO_IMAGE:-arangodb:3.12.10}
+    image: ${ARANGO_IMAGE:-arangodb:latest}
     container_name: arangodb
     # SERVER: Uncomment to ensure ArangoDB starts automatically on boot or failure
     # restart: unless-stopped
@@ -24,7 +24,11 @@ services:
     healthcheck:
       # The availability endpoint returns 200 without authentication and is
       # the documented way to check if ArangoDB is ready.
-      test: ["CMD-SHELL", "wget -q --spider http://localhost:8529/_admin/server/availability || exit 1"]
+      test:
+        [
+          "CMD-SHELL",
+          "wget -q --spider http://localhost:8529/_admin/server/availability || exit 1",
+        ]
       interval: 30s
       timeout: 10s
       retries: 5
