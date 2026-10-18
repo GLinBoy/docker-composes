@@ -3,7 +3,7 @@ name: forgejo
 services:
   # Forgejo — Git forge web application (the "server" role from the official image)
   server:
-    image: codeberg.org/forgejo/forgejo:${FORGEJO_VERSION:-16.0.2}
+    image: codeberg.org/forgejo/forgejo:${FORGEJO_VERSION:-latest}
     container_name: forgejo
     # SERVER: Uncomment to ensure Forgejo starts automatically on boot or failure
     # restart: unless-stopped
@@ -30,10 +30,7 @@ services:
       - forgejo-network
     healthcheck:
       test:
-        [
-          "CMD-SHELL",
-          "curl -sf http://localhost:3000/api/healthz || exit 1",
-        ]
+        ["CMD-SHELL", "curl -sf http://localhost:3000/api/healthz || exit 1"]
       interval: 30s
       timeout: 10s
       retries: 5
